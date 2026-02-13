@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f7f7f7; }
+       nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #667eea;
+    color: white;
+    padding: 20px 30px; /* increased padding for taller navbar */
+    border-radius: 5px;
+    font-size: 18px;   /* larger text */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2); /* subtle shadow */
+}
+nav a {
+    color: white;
+    text-decoration: none;
+    margin-left: 20px; /* more space between links */
+    font-weight: bold;
+}
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 20px; /* space between username and links */
+    font-size: 16px;
+}
+
+        h2 { margin-top: 20px; }
+        .cards { display: flex; gap: 30px; margin: 20px 0; flex-wrap: wrap; }
+        .card { padding: 15px; border-radius: 15px; width: 200px; text-align: center; background: white; box-shadow: 0 2px 5px rgba(52, 38, 38, 0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+        table, th, td { border: 1px solid #ccc; }
+        th, td { padding: 8px; text-align: center; }
+        #testsSection {
+    display: flex;
+    flex-wrap: wrap;     /* allows next row */
+    gap: 20px;           /* space between cards */
+    justify-content: flex-start; /* align left */
+    margin-top: 20px;
+}
+
+       .test-card {
+    width: 250px;          /* fixed width */
+    border: 1px solid #ccc;
+    padding: 15px;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+        button { padding: 5px 10px; border: none; border-radius: 5px;text-align:center; background: #667eea; color: white; cursor: pointer; }
+        canvas { 
+    width: 50%;        /* 1/2 of page width */
+    height: 150px;     /* reduce height to half (adjust if needed) */
+    margin: 20px auto; /* center the graph */
+    display: block;    /* needed for centering */
+    background: white; 
+    border-radius: 8px; 
+    padding: 10px; 
+}
+
+    </style>
+</head>
+<body>
+    <nav>
+        <div>Home</div>
+        <div class="nav-right">
+            <span id="userName"></span>
+            <a id="navAction" href="#">Dashboard</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <h2>Dashboard</h2>
+
+    <!-- Top Stats -->
+    <div class="cards" id="topSection"></div>
+
+    <!-- Performance Chart -->
+    <canvas id="performanceChart" style="display:none;"></canvas>
+
+    <!-- Available Tests / Admin Tests -->
+    <div id="testsSection"></div>
+
+    <script>
+        const Storage = {
+            getCurrentUser: () => JSON.parse(localStorage.getItem("currentUser")),
+            getUsers: () => JSON.parse(localStorage.getItem("users")) || [],
+            getTests: () => JSON.parse(localStorage.getItem("tests")) || [],
+            getResults: () => JSON.parse(localStorage.getItem("results")) || []
+        };
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const user = Storage.getCurrentUser();
+            if (!user) { window.location.href = "index.html"; return; }
+
+            document.getElementById("userName").textContent = user.username;
+
+            const navAction = document.getElementById("navAction");
+            const tests = Storage.getTests();
+            const results = Storage.getResults();
+
+            // Role-based nav
+            if(user.role === "admin"){
+                navAction.textContent = "Create Test";
+                navAction.href = "create_test.html";
+            } else {
+                navAction.style.display = "none"; // students do not need navAction
+            }
+
+            // Filter results
+            let userResults;
+            if(user.role === "student"){
+                userResults = results.filter(r => r.studentId === user.id);
+            } else {
+                const adminTests = tests.filter(t => t.adminId === user.id).map(t => t.id);
+                userResults = results.filter(r => adminTests.includes(r.testId));
+            }
+
+            // Top Stats
+            const totalTests = user.role === "student" ? tests.length : tests.filter(t => t.adminId === user.id).length;
+            const attempted = userResults.length;
+            let avgScore = 0;
+            if(attempted > 0){
+                const totalScore = userResults.reduce((sum,r)=>sum+r.score,0);
+                avgScore = Math.round(totalScore / attempted);
+            }
+
+            const topSection = document.getElementById("topSection");
+            topSection.innerHTML = `
+                <div class="card"><h3>${totalTests}</h3><p>Total Tests</p></div>
+                <div class="card"><h3>${attempted}</h3><p>Tests Attempted</p></div>
+                <div class="card"><h3>${avgScore}%</h3><p>Average Score</p></div>
+            `;
+
+            // Performance chart for students
+            const chartCanvas = document.getElementById("performanceChart");
+            if(user.role === "student" && userResults.length > 0){
+                chartCanvas.style.display = "block";
+                const ctx = chartCanvas.getContext("2d");
+                new Chart(ctx, {
+                    type: "line",
+                    data: {
+                        labels: userResults.map(r => r.date),
+                        datasets:[{
+                            label: "Score (%)",
+                            data: userResults.map(r=>r.score),
+                            borderColor:"#667eea",
+                            backgroundColor:"rgba(102,126,234,0.2)",
+                            tension:0.3,
+                            fill:true
+                        }]
+                    },
+     options:{ scales:{ y:{ beginAtZero:true, max:100 } } }
+
+                });
+            }
+
+            // Tests Section
+            const testsSection = document.getElementById("testsSection");
+            if(user.role === "student"){
+                testsSection.innerHTML = tests.map(test => `
+                    <div class="test-card">
+                        <h4>${test.title}</h4>
+                        <p><strong>Subject:</strong> ${test.subject}</p>
+                        <button onclick="startTest(${test.id})">Take Test</button>
+                    </div>
+                `).join("");
+            } else {
+                // Admin: show tests they created + results
+                const adminTests = tests.filter(t => t.adminId === user.id);
+                testsSection.innerHTML = adminTests.map(test => `
+                    <div class="test-card">
+                        <h4>${test.title}</h4>
+                        <p><strong>Subject:</strong> ${test.subject}</p>
+                        <h5>Student Results:</h5>
+                        <table>
+                            <thead>
+                                <tr><th>Student</th><th>Score</th><th>Date</th></tr>
+                            </thead>
+                            <tbody>
+                                ${results.filter(r => r.testId === test.id).map(r => {
+                                    const student = Storage.getUsers().find(u => u.id === r.studentId);
+                                    return `<tr><td>${student?.username || "Unknown"}</td><td>${r.score}%</td><td>${r.date}</td></tr>`;
+                                }).join("")}
+                            </tbody>
+                        </table>
+                    </div>
+                `).join("");
+            }
+
+        });
+
+        function startTest(testId){
+            localStorage.setItem("selectedTestId", testId);
+            window.location.href = "take_test.html";
+        }
+
+        function logout(){
+            localStorage.removeItem("currentUser");
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+</html>

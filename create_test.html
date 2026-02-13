@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Create Test</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+    /* ===== Container Styles ===== */
+    .container {
+        max-width: 900px;
+        margin: 20px auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .container .card {
+        width: 100%;
+        margin-bottom: 20px;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    /* ===== Questions Container ===== */
+    #questionsContainer {
+        width: 100%;
+        max-height: 500px;
+        overflow-y: auto;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        margin-top: 15px;
+    }
+
+    .question-block {
+        margin-bottom: 15px;
+    }
+
+    .question-block h4 {
+        margin-bottom: 8px;
+        color: #333;
+        font-size: 16px;
+    }
+
+    .question-block input[type="text"] {
+        width: 95%;
+        padding: 6px 8px;
+        margin-bottom: 5px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        font-size: 14px;
+    }
+
+    /* ===== Center Submit Button ===== */
+    .container button {
+        width: 200px;
+        text-align: center;
+        align-self: center;
+        margin-top: 10px;
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <h2>Create Test</h2>
+    <nav>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="#" onclick="logout()">Logout</a>
+    </nav>
+</header>
+
+<div class="container">
+    <!-- Test Info Card -->
+    <div class="card">
+        <input type="text" id="subject" placeholder="Subject">
+        <input type="text" id="title" placeholder="Test Title">
+        <input type="number" id="numQuestions" placeholder="Number of Questions" min="1">
+    </div>
+
+    <!-- Questions Container -->
+    <div id="questionsContainer" class="card"></div>
+
+    <!-- Submit Button -->
+    <button onclick="createTest()">Submit Test</button>
+</div>
+
+<script src="js/storage.js"></script>
+<script>
+const questionsContainer = document.getElementById("questionsContainer");
+const numQuestionsInput = document.getElementById("numQuestions");
+
+// Create question input fields dynamically
+numQuestionsInput.addEventListener("change", () => {
+    const n = parseInt(numQuestionsInput.value);
+    if (!n || n <= 0) return;
+
+    questionsContainer.innerHTML = ""; // clear previous questions
+
+    for (let i = 1; i <= n; i++) {
+        const div = document.createElement("div");
+        div.classList.add("question-block");
+        div.innerHTML = `
+            <h4>Question ${i}</h4>
+            <input type="text" placeholder="Question Text" class="qText" required><br>
+            <input type="text" placeholder="Option A" class="optA" required><br>
+            <input type="text" placeholder="Option B" class="optB" required><br>
+            <input type="text" placeholder="Option C" class="optC" required><br>
+            <input type="text" placeholder="Option D" class="optD" required><br>
+            <input type="text" placeholder="Correct Answer (A/B/C/D)" class="correctAns" required><hr>
+        `;
+        questionsContainer.appendChild(div);
+    }
+});
+
+// Create test and save to localStorage
+function createTest() {
+    const user = JSON.parse(localStorage.getItem("currentUser")) || { id: "admin1" };
+    const subject = document.getElementById("subject").value.trim();
+    const title = document.getElementById("title").value.trim();
+    const n = parseInt(document.getElementById("numQuestions").value);
+
+    if (!subject || !title || !n) {
+        alert("Please enter subject, title, and number of questions");
+        return;
+    }
+
+    const qDivs = document.querySelectorAll("#questionsContainer > div");
+    const questions = [];
+
+    for (let div of qDivs) {
+        questions.push({
+            text: div.querySelector(".qText").value,
+            options: [
+                div.querySelector(".optA").value,
+                div.querySelector(".optB").value,
+                div.querySelector(".optC").value,
+                div.querySelector(".optD").value
+            ],
+            answer: div.querySelector(".correctAns").value.toUpperCase()
+        });
+    }
+
+    let tests = JSON.parse(localStorage.getItem("tests") || "[]");
+    tests.push({
+        id: Date.now(),
+        subject,
+        title,
+        createdBy: user.id,
+        questions
+    });
+
+    localStorage.setItem("tests", JSON.stringify(tests));
+    alert("Test created successfully!");
+    window.location.href = "dashboard.html";
+}
+
+// Logout
+function logout() {
+    localStorage.removeItem("currentUser");
+    window.location.href = "index.html";
+}
+</script>
+</body>
+</html>

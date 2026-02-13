@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<header>
+    <h2>Dashboard</h2>
+    <nav>
+        <a href="#" onclick="logout()">Logout</a>
+    </nav>
+</header>
+
+<main class="dashboard-container">
+
+    <!-- TOP ROW -->
+    <div id="topSection" class="top-scroll"></div>
+
+    <!-- AVAILABLE TESTS -->
+    <h3>Available Tests</h3>
+    <div id="testsSection" class="tests-grid"></div>
+
+    <!-- PERFORMANCE GRAPH -->
+    <div class="card graph-card">
+        <h3>Performance Graph</h3>
+        <canvas id="performanceChart"></canvas>
+    </div>
+
+</main>
+
+<script src="js/storage.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

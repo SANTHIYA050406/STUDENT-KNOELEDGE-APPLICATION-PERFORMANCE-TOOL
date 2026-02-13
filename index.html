@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #f2f2f2;
+        }
+        .login-container {
+            padding: 30px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background: white;
+            width: 300px;
+            text-align: center;
+        }
+        input, select, button {
+            display: block;
+            margin: 10px 0;
+            padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <select id="role">
+            <option value="student">Student</option>
+            <option value="admin">Admin</option>
+        </select>
+        <button id="loginBtn">Login</button>
+    </div>
+
+    <script>
+        // Storage helper
+        const Storage = {
+            getUsers: () => JSON.parse(localStorage.getItem("users")) || [],
+            saveUser: (user) => {
+                const users = Storage.getUsers();
+                const existing = users.find(u => u.username === user.username && u.role === user.role);
+                if (!existing) users.push(user);
+                localStorage.setItem("users", JSON.stringify(users));
+            },
+            getCurrentUser: () => JSON.parse(localStorage.getItem("currentUser"))
+        };
+
+        document.getElementById("loginBtn").addEventListener("click", () => {
+            const username = document.getElementById("username").value.trim();
+            const password = document.getElementById("password").value.trim();
+            const role = document.getElementById("role").value;
+
+            if (!username || !password) {
+                alert("Please fill in all fields!");
+                return;
+            }
+
+            const users = Storage.getUsers();
+            const existingUser = users.find(u => u.username === username && u.role === role);
+
+            if (existingUser) {
+                // User exists → check password
+                if (existingUser.password !== password) {
+                    alert("Incorrect password!");
+                    return;
+                }
+                // Login success
+                localStorage.setItem("currentUser", JSON.stringify(existingUser));
+            } else {
+                // First-time user → register
+                const newUser = { id: Date.now(), username, password, role };
+                Storage.saveUser(newUser);
+                localStorage.setItem("currentUser", JSON.stringify(newUser));
+            }
+
+            // Redirect to dashboard
+            window.location.href = "dashboard.html";
+        });
+    </script>
+</body>
+</html>
