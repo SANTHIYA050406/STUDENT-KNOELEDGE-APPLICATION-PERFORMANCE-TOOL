@@ -71,7 +71,7 @@ function createTest() {
 
     Storage.saveTests(tests);
     alert("Test created successfully!");
-    window.location.href = "dashboard.html";
+    window.location.href = "admin_dashboard.html";
 }
 
 function logout() {

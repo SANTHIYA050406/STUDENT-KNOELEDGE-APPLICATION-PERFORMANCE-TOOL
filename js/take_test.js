@@ -1,86 +1,80 @@
+// ===== GET USER & TEST DATA =====
+const user = JSON.parse(localStorage.getItem("currentUser"));
+const tests = JSON.parse(localStorage.getItem("tests")) || [];
+const selectedTestId = JSON.parse(localStorage.getItem("selectedTestId"));
+const results = JSON.parse(localStorage.getItem("results")) || [];
 
-window.onload = function () {
-    loadTest();
-};
-
-function loadTest() {
-    const testId = localStorage.getItem("activeTest");
-    const tests = Storage.getTests();
-    const test = tests.find(t => t.id == testId);
-
-    const container = document.getElementById("testContainer");
-
-    if (!test) {
-        container.innerHTML = "<p>Test not found</p>";
-        return;
-    }
-
-    if (!test.questions || test.questions.length === 0) {
-        container.innerHTML = "<p>No questions added to this test.</p>";
-        return;
-    }
-
-    container.innerHTML = `<h3>${test.title}</h3>`;
-
-    test.questions.forEach((q, index) => {
-        const div = document.createElement("div");
-
-        div.innerHTML = `
-            <p><b>Q${index + 1}:</b> ${q.text}</p>
-            ${q.options.map((option, i) => `
-                <label>
-                    <input type="radio" name="q${index}" value="${String.fromCharCode(65+i)}">
-                    ${option}
-                </label><br>
-            `).join("")}
-            <hr>
-        `;
-
-        container.appendChild(div);
-    });
+if (!user) {
+    window.location.href = "index.html";
 }
 
-function submitTest() {
-    const user = Storage.getCurrentUser();
-    const testId = localStorage.getItem("activeTest");
-    const tests = Storage.getTests();
-    const test = tests.find(t => t.id == testId);
+// Find the selected test
+const currentTest = tests.find(t => t.id === selectedTestId);
+const testContainer = document.getElementById("testContainer");
 
-    if (!test) {
-        alert("Test not found");
-        return;
-    }
-
-    let score = 0;
-
-    test.questions.forEach((q, index) => {
-        const selected = document.querySelector(`input[name="q${index}"]:checked`);
-
-        if (selected && selected.value === q.answer) {
-            score++;
-        }
-    });
-
-    const results = Storage.getResults();
-    const now = new Date();
-
-    results.push({
-        id: Date.now(),
-        studentId: user.id,
-        studentName: user.username,
-        testId: test.id,
-        score: score,
-        total: test.questions.length,
-        date: now.toLocaleDateString() + " " + now.toLocaleTimeString()
-    });
-
-    Storage.saveResults(results);
-
-    alert(`Test submitted!\nScore: ${score}/${test.questions.length}`);
-    window.location.href = "dashboard.html";
-}
-
+// ===== LOGOUT FUNCTION =====
 function logout() {
     localStorage.removeItem("currentUser");
     window.location.href = "index.html";
 }
+
+// ===== RENDER QUESTIONS =====
+if (currentTest) {
+    currentTest.questions.forEach((q, index) => {
+        const div = document.createElement("div");
+        div.classList.add("question-card");
+        div.style.marginBottom = "15px";
+        div.style.padding = "10px";
+        div.style.border = "1px solid #ccc";
+        div.style.borderRadius = "6px";
+
+        div.innerHTML = `
+            <p><strong>Q${index + 1}:</strong> ${q.text}</p>
+            ${q.options.map((opt, i) => `
+                <label>
+                    <input type="radio" name="q${index}" value="${opt}">
+                    ${opt}
+                </label><br>
+            `).join("")}
+        `;
+
+        testContainer.appendChild(div);
+    });
+} else {
+    testContainer.innerHTML = "<p>No test selected.</p>";
+}
+
+// ===== SUBMIT TEST =====
+function submitTest() {
+    if (!currentTest) return;
+
+    let score = 0;
+
+    currentTest.questions.forEach((q, index) => {
+        const selected = document.querySelector(`input[name="q${index}"]:checked`);
+        const expectedAnswer = q.correctAnswer || (q.answer ? q.options["ABCD".indexOf(q.answer)] : undefined);
+        if (selected && expectedAnswer && selected.value === expectedAnswer) {
+            score++;
+        }
+    });
+
+    // Calculate percentage score
+    const percentage = Math.round((score / currentTest.questions.length) * 100);
+
+    // Create new result object
+    const newResult = {
+        testId: currentTest.id,
+        username: user.username,
+        score: percentage,
+        date: new Date().toLocaleDateString()
+    };
+
+    // Save to localStorage
+    results.push(newResult);
+    localStorage.setItem("results", JSON.stringify(results));
+
+    // Redirect to dashboard
+    window.location.href = "dashboard.html";
+}
+
+

@@ -1,26 +1,79 @@
-<!DOCTYPE html>
-<html>
+﻿<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Take Test</title>
-    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body { font-family: Arial, sans-serif; background:#f5f8ff; margin:0; }
+        .header { background:#1e3a8a; color:#fff; padding:12px 20px; display:flex; justify-content:space-between; }
+        .container { max-width:900px; margin:16px auto; padding:0 12px; }
+        .card { background:#fff; border:1px solid #d6e1f2; border-radius:10px; padding:12px; margin-bottom:10px; }
+        button { padding:8px 12px; }
+    </style>
 </head>
 <body>
-
-<header>
-    <h2>Take Test</h2>
-    <nav>
-        <a href="dashboard.html">Dashboard</a>
-        <a href="#" onclick="logout()">Logout</a>
-    </nav>
-</header>
-
-<div class="card">
-    <div id="testContainer"></div>  <!-- QUESTIONS WILL LOAD HERE -->
-
-    <button onclick="submitTest()">Submit Test</button>
+<div class="header">
+    <h2 id="testTitle">Take Test</h2>
+    <button onclick="backToDashboard()">Back</button>
 </div>
+<div class="container" id="testContainer"></div>
+<div class="container"><button onclick="submitTest()">Submit Test</button></div>
 
-<script src="js/storage.js"></script>
-<script src="js/take_test.js"></script>
+<script src="js/store.js"></script>
+<script src="js/api.js"></script>
+<script>
+let currentTest = null;
+
+async function loadTest() {
+    const user = AppStore.getState().user;
+    if (!user) { window.location.href = "index.html"; return; }
+
+    const selectedTestId = localStorage.getItem("selectedTestId");
+    if (!selectedTestId) {
+        document.getElementById("testContainer").innerHTML = "<p>No test selected.</p>";
+        return;
+    }
+
+    try {
+        const { test } = await Api.getTest(selectedTestId);
+        currentTest = test;
+        document.getElementById("testTitle").textContent = test.title;
+
+        document.getElementById("testContainer").innerHTML = test.questions.map((q, i) => `
+            <div class="card">
+                <p><strong>Q${i + 1}.</strong> ${q.text}</p>
+                ${q.options.map((opt, idx) => {
+                    const value = String.fromCharCode(65 + idx);
+                    return `<label><input type="radio" name="q${i}" value="${value}"> ${opt}</label><br>`;
+                }).join("")}
+            </div>
+        `).join("");
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function submitTest() {
+    if (!currentTest) return;
+
+    const answers = currentTest.questions.map((_, i) => {
+        const selected = document.querySelector(`input[name="q${i}"]:checked`);
+        return selected ? selected.value : "";
+    });
+
+    try {
+        await Api.submitResult({ testId: currentTest.id, answers });
+        window.location.href = "dashboard.html";
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+function backToDashboard() {
+    window.location.href = "dashboard.html";
+}
+
+loadTest();
+</script>
 </body>
 </html>

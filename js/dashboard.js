@@ -25,64 +25,100 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ===== FETCH DATA =====
-    const tests = Storage.getTests() || [];
-    const results = Storage.getResults() || [];
-    const userResults = results.filter(r => r.studentId === user.id);
+const tests = Storage.getTests() || [];
+const results = Storage.getResults() || [];
 
-    console.log("Tests:", tests);
-    console.log("User:", user);
+console.log("All Results:", results);
+console.log("Current User:", user);
+console.log("User ID:", user.id);
 
-    const totalTests = tests.length;
-    const attempted = userResults.length;
+// Check result IDs
+results.forEach(r => {
+    console.log("Result studentId:", r.studentId);
+});
 
-    let avgScore = 0;
-    if (attempted > 0) {
-        const total = userResults.reduce((sum, r) => sum + r.score, 0);
-        avgScore = Math.round(total / attempted);
-    }
+const userResults = results.filter(r => r.studentId === user.id);
+
+console.log("Filtered User Results:", userResults);
+
 
     // ================= TOP SECTION =================
-    const topSection = document.getElementById("topSection");
-    if (topSection) {
-        topSection.innerHTML = `
-            <div class="card stat-card">
-                <h2>${totalTests}</h2>
-                <p>Total Tests</p>
-            </div>
+   const topSection = document.getElementById("topSection");
 
-            <div class="card stat-card">
-                <h2>${attempted}</h2>
-                <p>Tests Attempted</p>
-            </div>
+if (topSection) {
+    topSection.innerHTML = `
+        <div class="card stat-card">
+            <div class="icon blue"></div>
+            <h2>${totalTests}</h2>
+            <p>Total Tests</p>
+        </div>
 
-            <div class="card stat-card">
-                <h2>${avgScore}%</h2>
-                <p>Average Score</p>
-            </div>
+        <div class="card stat-card">
+            <div class="icon purple"></div>
+            <h2>${attempted}</h2>
+            <p>Tests Attempted</p>
+        </div>
 
-            <div class="card result-card">
-                <h3>Result History</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Test ID</th>
-                            <th>Score</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${userResults.map(r => `
-                            <tr>
-                                <td>${r.testId}</td>
-                                <td>${r.score}%</td>
-                                <td>${r.date}</td>
-                            </tr>
-                        `).join("")}
-                    </tbody>
-                </table>
+        <div class="card stat-card">
+            <div class="icon orange"></div>
+            <h2>${avgScore}%</h2>
+            <p>Avg. Score</p>
+        </div>
+
+        <div class="card history-card">
+            <h3>History</h3>
+            <div class="history-list">
+                ${
+                    userResults.length === 0
+                    ? "<p>No tests attempted yet.</p>"
+                    : userResults.map(r => {
+                        const test = tests.find(t => t.id === r.testId);
+                        return `
+                            <div class="history-item">
+                                <span>${test ? test.title : "Test"}</span>
+                                <span class="score">${r.score}%</span>
+                            </div>
+                        `;
+                    }).join("")
+                }
             </div>
-        `;
+        </div>
+    `;
+}
+//feedback
+const feedbackSection = document.getElementById("feedbackSection");
+
+if (feedbackSection) {
+
+    let strength = "";
+    let growth = "";
+
+    if (avgScore >= 80) {
+        strength = "Excellent mastery of the subject.";
+        growth = "Try applying concepts in real-world projects.";
+    } 
+    else if (avgScore >= 50) {
+        strength = "Good understanding of fundamentals.";
+        growth = "Focus on improving weak topics.";
+    } 
+    else {
+        strength = "You are building your foundation.";
+        growth = "Revise basics and retake tests.";
     }
+
+    feedbackSection.innerHTML = `
+        <div class="feedback good">
+            <h3>Strength Identified</h3>
+            <p>${strength}</p>
+        </div>
+
+        <div class="feedback improve">
+            <h3>Growth Opportunity</h3>
+            <p>${growth}</p>
+        </div>
+    `;
+}
+
 
     // ================= AVAILABLE TESTS =================
     const testsSection = document.getElementById("testsSection");
