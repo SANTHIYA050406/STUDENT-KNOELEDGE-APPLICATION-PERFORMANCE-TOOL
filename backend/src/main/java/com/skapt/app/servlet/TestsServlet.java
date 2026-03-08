@@ -1,4 +1,4 @@
-﻿package com.skapt.app.servlet;
+package com.skapt.app.servlet;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.skapt.app.config.Db;
@@ -28,6 +28,7 @@ public class TestsServlet extends BaseServlet {
             long id = Long.parseLong(path.substring(1));
             getTest(id, res);
         } catch (Exception ex) {
+            logException("Request handling failed", ex);
             try { error(res, HttpServletResponse.SC_BAD_REQUEST, ex.getMessage()); } catch (Exception ignored) {}
         }
     }
@@ -64,6 +65,7 @@ public class TestsServlet extends BaseServlet {
                 getTest(keys.getLong(1), res, HttpServletResponse.SC_CREATED);
             }
         } catch (Exception ex) {
+            logException("Request handling failed", ex);
             try { error(res, HttpServletResponse.SC_BAD_REQUEST, ex.getMessage()); } catch (Exception ignored) {}
         }
     }
@@ -101,6 +103,7 @@ public class TestsServlet extends BaseServlet {
             }
             getTest(id, res);
         } catch (Exception ex) {
+            logException("Request handling failed", ex);
             try { error(res, HttpServletResponse.SC_BAD_REQUEST, ex.getMessage()); } catch (Exception ignored) {}
         }
     }
@@ -131,6 +134,7 @@ public class TestsServlet extends BaseServlet {
             }
             res.setStatus(HttpServletResponse.SC_NO_CONTENT);
         } catch (Exception ex) {
+            logException("Request handling failed", ex);
             try { error(res, HttpServletResponse.SC_BAD_REQUEST, ex.getMessage()); } catch (Exception ignored) {}
         }
     }
@@ -181,3 +185,5 @@ public class TestsServlet extends BaseServlet {
         );
     }
 }
+
+

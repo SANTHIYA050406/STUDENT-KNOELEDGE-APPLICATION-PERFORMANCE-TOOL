@@ -1,4 +1,4 @@
-﻿const API_BASE = "http://localhost:8080/api";
+const API_BASE = "http://localhost:8080/api";
 
 function authHeaders() {
     const token = localStorage.getItem("token");
@@ -72,5 +72,32 @@ window.Api = {
 
     getStudents() {
         return request("/users/students");
+    },
+
+    getAcademicDocuments(studentUsername) {
+        const q = studentUsername ? `?studentUsername=${encodeURIComponent(studentUsername)}` : "";
+        return request(`/documents/academics${q}`);
+    },
+
+    createAcademicDocument(data) {
+        return request("/documents/academics", { method: "POST", body: JSON.stringify(data) });
+    },
+
+    getCertificationDocuments(studentUsername) {
+        const q = studentUsername ? `?studentUsername=${encodeURIComponent(studentUsername)}` : "";
+        return request(`/documents/certifications${q}`);
+    },
+
+    createCertificationDocument(data) {
+        return request("/documents/certifications", { method: "POST", body: JSON.stringify(data) });
+    },
+
+    getCompetitionDocuments(studentUsername) {
+        const q = studentUsername ? `?studentUsername=${encodeURIComponent(studentUsername)}` : "";
+        return request(`/documents/competition${q}`);
+    },
+
+    createCompetitionDocument(data) {
+        return request("/documents/competition", { method: "POST", body: JSON.stringify(data) });
     }
 };

@@ -1,4 +1,4 @@
-﻿package com.skapt.app.security;
+package com.skapt.app.security;
 
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.Filter;
@@ -9,11 +9,14 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 @WebFilter("/api/*")
 public class AuthFilter implements Filter {
+    private static final Logger logger = LoggerFactory.getLogger(AuthFilter.class);
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -56,6 +59,7 @@ public class AuthFilter implements Filter {
             req.setAttribute("role", ((String) claims.get("role")).toLowerCase());
             chain.doFilter(request, response);
         } catch (Exception ex) {
+            logger.warn("JWT validation failed for path: {}", req.getRequestURI(), ex);
             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             res.getWriter().write("{\"error\":\"Invalid or expired token\"}");
         }

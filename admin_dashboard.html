@@ -182,236 +182,275 @@
     </div>
   </div>
 
-  <script>
-    const user = JSON.parse(localStorage.getItem("currentUser"));
-    const tests = JSON.parse(localStorage.getItem("tests")) || [];
-    const results = JSON.parse(localStorage.getItem("results")) || [];
-    const users = JSON.parse(localStorage.getItem("users")) || [];
+  <script src="js/store.js"></script>
+<script src="js/api.js"></script>
+<script>
+  let user = AppStore.getState().user || JSON.parse(localStorage.getItem("currentUser") || "null");
+  let tests = [];
+  let results = [];
+  let students = [];
 
-    if (!user || (user.role !== "teacher" && user.role !== "admin")) {
-      window.location.href = "index.html";
-    }
+  if (!user || (user.role !== "teacher" && user.role !== "admin")) {
+    window.location.href = "index.html";
+  }
 
+  function studentByUsername(username) {
+    return students.find(s => s.username === username) || null;
+  }
+
+  function renderHeaderDetails() {
     document.getElementById("welcomeText").innerText = `Welcome, ${user.teacherProfile?.name || user.username} (Teacher)`;
-
     if (user.teacherProfile) {
       document.getElementById("teacherProfileRow").style.display = "flex";
       document.getElementById("teacherProfileText").innerText =
         `Name: ${user.teacherProfile.name} | Faculty ID: ${user.teacherProfile.facultyId} | Department: ${user.teacherProfile.department}`;
     }
+  }
 
-    function getTeacherRequests() {
-      const all = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
-      return all.filter(r => r.teacherId === user.id || r.teacherUsername === user.username);
+  function getTeacherRequests() {
+    const all = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
+    return all.filter(r => String(r.teacherId) === String(user.id) || r.teacherUsername === user.username);
+  }
+
+  function getAcceptedRequests() {
+    return getTeacherRequests().filter(r => r.status === "accepted");
+  }
+
+  function refreshDashboard() {
+    const teacherRequests = getTeacherRequests();
+    const accepted = getAcceptedRequests();
+    const acceptedUsernames = [...new Set(accepted.map(r => r.studentUsername))];
+
+    const myTests = tests.filter(t => Number(t.createdBy) === Number(user.id) || user.role === "admin");
+    const myTestIds = new Set(myTests.map(t => Number(t.id)));
+
+    document.getElementById("totalTestsCreated").innerText = myTests.length;
+    document.getElementById("totalTestsAttempted").innerText = results.filter(r => myTestIds.has(Number(r.testId))).length;
+    document.getElementById("connectedStudents").innerText = acceptedUsernames.length;
+
+    const pendingBody = document.querySelector("#pendingRequestsTable tbody");
+    pendingBody.innerHTML = teacherRequests.length
+      ? teacherRequests.sort((a, b) => b.id - a.id).map(r => `<tr><td>${r.studentName || r.studentUsername}</td><td>${r.studentRollNo || '-'}</td><td>${r.groupName || 'General'}</td><td>${r.status}</td><td>${r.requestedAt || '-'}</td></tr>`).join("")
+      : '<tr><td colspan="5">No requests yet.</td></tr>';
+
+    renderGroups(accepted);
+    renderSelectors(accepted);
+    renderResults(acceptedUsernames);
+    renderTeacherInbox();
+    renderFeedbackSentTable();
+  }
+
+  function renderGroups(accepted) {
+    const byGroup = {};
+    accepted.forEach(r => {
+      const group = r.groupName || "General";
+      if (!byGroup[group]) byGroup[group] = [];
+      byGroup[group].push(r);
+    });
+
+    const container = document.getElementById("teacherGroupsContainer");
+    const groups = Object.keys(byGroup);
+    if (!groups.length) {
+      container.innerHTML = '<p class="muted">No accepted students in groups.</p>';
+      return;
     }
 
-    function getAcceptedRequests() {
-      return getTeacherRequests().filter(r => r.status === "accepted");
-    }
-
-    function refreshDashboard() {
-      const teacherRequests = getTeacherRequests();
-      const accepted = getAcceptedRequests();
-      const acceptedUsernames = [...new Set(accepted.map(r => r.studentUsername))];
-
-      const myTests = tests.filter(t => t.createdBy === user.id);
-      document.getElementById("totalTestsCreated").innerText = myTests.length;
-      document.getElementById("totalTestsAttempted").innerText = results.filter(r => myTests.some(t => t.id == r.testId)).length;
-      document.getElementById("connectedStudents").innerText = acceptedUsernames.length;
-
-      const pendingBody = document.querySelector("#pendingRequestsTable tbody");
-      pendingBody.innerHTML = teacherRequests.length
-        ? teacherRequests.sort((a,b)=>b.id-a.id).map(r => `<tr><td>${r.studentName || r.studentUsername}</td><td>${r.studentRollNo || '-'}</td><td>${r.groupName || 'General'}</td><td>${r.status}</td><td>${r.requestedAt || '-'}</td></tr>`).join("")
-        : '<tr><td colspan="5">No requests yet.</td></tr>';
-
-      renderGroups(accepted);
-      renderSelectors(accepted);
-      renderResults(acceptedUsernames);
-      renderTeacherInbox();
-      renderFeedbackSentTable();
-    }
-
-    function renderGroups(accepted) {
-      const byGroup = {};
-      accepted.forEach(r => {
-        const group = r.groupName || "General";
-        if (!byGroup[group]) byGroup[group] = [];
-        byGroup[group].push(r);
-      });
-
-      const container = document.getElementById("teacherGroupsContainer");
-      const groups = Object.keys(byGroup);
-      if (!groups.length) {
-        container.innerHTML = '<p class="muted">No accepted students in groups.</p>';
-        return;
-      }
-
-      container.innerHTML = groups.map(group => {
-        const studentsHtml = byGroup[group].map(r => {
-          const stu = users.find(u => u.username === r.studentUsername && u.role === "student");
-          const p = stu?.studentProfile || {};
-          return `<div class="student"><strong>${p.name || r.studentUsername}</strong> <a class="link" href="#" onclick="openStudentDetails('${r.studentUsername}');return false;">Student Detail</a><br>Roll No: ${p.rollNo || r.studentRollNo || '-'} | Department: ${p.department || '-'} | CGPA: ${p.cgpa ?? '-'}<div style="margin-top:8px;"><button class="danger" onclick="removeStudentFromGroup('${r.studentUsername}','${group}')">Remove Student</button></div></div>`;
-        }).join("");
-
-        return `<h4 class="group-title">Group: ${group} <button class="danger" onclick="removeGroup('${group}')">Remove Group</button></h4>${studentsHtml}`;
+    container.innerHTML = groups.map(group => {
+      const studentsHtml = byGroup[group].map(r => {
+        const stu = studentByUsername(r.studentUsername);
+        const p = stu?.studentProfile || {};
+        return `<div class="student"><strong>${p.name || r.studentName || r.studentUsername}</strong> <a class="link" href="#" onclick="openStudentDetails('${r.studentUsername}');return false;">Student Detail</a><br>Roll No: ${p.rollNo || r.studentRollNo || '-'} | Department: ${p.department || '-'} | CGPA: ${p.cgpa ?? '-'}<div style="margin-top:8px;"><button class="danger" onclick="removeStudentFromGroup('${r.studentUsername}','${group}')">Remove Student</button></div></div>`;
       }).join("");
+
+      return `<h4 class="group-title">Group: ${group} <button class="danger" onclick="removeGroup('${group}')">Remove Group</button></h4>${studentsHtml}`;
+    }).join("");
+  }
+
+  function renderSelectors(accepted) {
+    const usernames = [...new Set(accepted.map(r => r.studentUsername))];
+    const options = usernames.length
+      ? usernames.map(u => {
+          const stu = studentByUsername(u);
+          return `<option value="${u}">${stu?.studentProfile?.name || u} (${u})</option>`;
+        }).join("")
+      : '<option value="">No accepted students</option>';
+
+    document.getElementById("notifyStudentSelect").innerHTML = options;
+    document.getElementById("feedbackStudentSelect").innerHTML = options;
+  }
+
+  function renderResults(acceptedUsernames) {
+    const body = document.querySelector("#studentsResultsTable tbody");
+    const visible = results.filter(r => acceptedUsernames.includes(r.studentUsername));
+    body.innerHTML = visible.length
+      ? visible.map(r => {
+          const t = tests.find(x => Number(x.id) === Number(r.testId));
+          const dateText = r.submittedAt ? new Date(r.submittedAt).toLocaleDateString() : "-";
+          return `<tr><td>${r.studentUsername}</td><td>${t ? t.title : (r.testTitle || 'Unknown')}</td><td>${r.score}%</td><td>${dateText}</td></tr>`;
+        }).join("")
+      : '<tr><td colspan="4">No results from accepted students.</td></tr>';
+  }
+
+  function sendGroupRequest() {
+    const groupName = document.getElementById("groupName").value.trim() || "General";
+    const studentRollNo = document.getElementById("studentRollNoInput").value.trim();
+    if (!studentRollNo) {
+      alert("Enter student roll number.");
+      return;
     }
 
-    function renderSelectors(accepted) {
-      const usernames = [...new Set(accepted.map(r => r.studentUsername))];
-      const options = usernames.length
-        ? usernames.map(u => {
-            const stu = users.find(x => x.username === u && x.role === "student");
-            return `<option value="${u}">${stu?.studentProfile?.name || u} (${u})</option>`;
-          }).join("")
-        : '<option value="">No accepted students</option>';
-
-      document.getElementById("notifyStudentSelect").innerHTML = options;
-      document.getElementById("feedbackStudentSelect").innerHTML = options;
+    const student = students.find(s => ((s.studentProfile?.rollNo || "").trim().toLowerCase() === studentRollNo.toLowerCase()));
+    if (!student) {
+      alert("Student not found for this roll number.");
+      return;
     }
 
-    function renderResults(acceptedUsernames) {
-      const body = document.querySelector("#studentsResultsTable tbody");
-      const visible = results.filter(r => acceptedUsernames.includes(r.username));
-      body.innerHTML = visible.length
-        ? visible.map(r => {
-            const t = tests.find(x => x.id == r.testId);
-            return `<tr><td>${r.username}</td><td>${t ? t.title : 'Unknown'}</td><td>${r.score}%</td><td>${r.date}</td></tr>`;
-          }).join("")
-        : '<tr><td colspan="4">No results from accepted students.</td></tr>';
+    const reqs = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
+    const dup = reqs.find(r =>
+      r.teacherUsername === user.username &&
+      r.studentUsername === student.username &&
+      (r.groupName || "General").toLowerCase() === groupName.toLowerCase() &&
+      ["pending", "accepted"].includes(r.status)
+    );
+    if (dup) {
+      alert("Pending or accepted request already exists for this student in this group.");
+      return;
     }
 
-    function sendGroupRequest() {
-      const groupName = (document.getElementById("groupName").value.trim() || "General");
-      const studentRollNo = document.getElementById("studentRollNoInput").value.trim();
-      if (!studentRollNo) {
-        alert("Enter student roll number.");
-        return;
-      }
+    reqs.push({
+      id: Date.now(),
+      teacherId: user.id,
+      teacherUsername: user.username,
+      teacherName: user.teacherProfile?.name || user.username,
+      teacherDepartment: user.teacherProfile?.department || "",
+      studentId: student.id,
+      studentUsername: student.username,
+      studentName: student.studentProfile?.name || student.username,
+      studentRollNo: student.studentProfile?.rollNo || "",
+      groupName,
+      status: "pending",
+      requestedAt: new Date().toLocaleString()
+    });
 
-      const allUsers = JSON.parse(localStorage.getItem("users")) || [];
-      const student = allUsers.find(u => u.role === "student" && ((u.studentProfile?.rollNo || "").trim().toLowerCase() === studentRollNo.toLowerCase()));
-      if (!student) {
-        alert("Student not found for this roll number.");
-        return;
-      }
-
-      const reqs = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
-      const dup = reqs.find(r =>
-        r.teacherUsername === user.username &&
-        r.studentUsername === student.username &&
-        (r.groupName || "General").toLowerCase() === groupName.toLowerCase() &&
-        ["pending", "accepted"].includes(r.status)
-      );
-      if (dup) {
-        alert("Pending or accepted request already exists for this student in this group.");
-        return;
-      }
-
-      reqs.push({
-        id: Date.now(),
-        teacherId: user.id,
-        teacherUsername: user.username,
-        teacherName: user.teacherProfile?.name || user.username,
-        teacherDepartment: user.teacherProfile?.department || "",
-        studentId: student.id,
-        studentUsername: student.username,
-        studentName: student.studentProfile?.name || student.username,
-        studentRollNo: student.studentProfile?.rollNo || "",
-        groupName,
-        status: "pending",
-        requestedAt: new Date().toLocaleString()
-      });
-
-      localStorage.setItem("studentGroupRequests", JSON.stringify(reqs));
-      document.getElementById("studentRollNoInput").value = "";
-      alert("Request sent.");
-      refreshDashboard();
-    }
-
-    function removeStudentFromGroup(studentUsername, groupName) {
-      const reqs = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
-      reqs.forEach(r => {
-        if ((r.teacherId === user.id || r.teacherUsername === user.username) && r.studentUsername === studentUsername && (r.groupName || "General") === groupName && r.status === "accepted") {
-          r.status = "removed_by_teacher";
-          r.removedAt = new Date().toLocaleString();
-        }
-      });
-      localStorage.setItem("studentGroupRequests", JSON.stringify(reqs));
-      refreshDashboard();
-    }
-
-    function removeGroup(groupName) {
-      const reqs = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
-      reqs.forEach(r => {
-        if ((r.teacherId === user.id || r.teacherUsername === user.username) && (r.groupName || "General") === groupName && ["pending", "accepted"].includes(r.status)) {
-          r.status = "removed_by_teacher";
-          r.removedAt = new Date().toLocaleString();
-        }
-      });
-      localStorage.setItem("studentGroupRequests", JSON.stringify(reqs));
-      refreshDashboard();
-    }
-
-    function sendNotificationToStudent() {
-      const toUsername = document.getElementById("notifyStudentSelect").value;
-      const message = document.getElementById("teacherNotificationMsg").value.trim();
-      if (!toUsername) { alert("No connected student selected."); return; }
-      if (!message) { alert("Notification message is required."); return; }
-
-      const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
-      notes.push({ id: Date.now(), fromUsername: user.username, fromRole: "teacher", toUsername, toRole: "student", message, createdAt: new Date().toLocaleString() });
-      localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
-      document.getElementById("teacherNotificationMsg").value = "";
-      alert("Notification sent.");
-    }
-
-    function sendFeedbackToStudent() {
-      const toUsername = document.getElementById("feedbackStudentSelect").value;
-      const message = document.getElementById("feedbackTemplate").value;
-      if (!toUsername) { alert("No connected student selected."); return; }
-
-      const feedbacks = JSON.parse(localStorage.getItem("studentFeedbackMessages")) || [];
-      feedbacks.push({ id: Date.now(), fromUsername: user.username, fromRole: "teacher", toUsername, message, createdAt: new Date().toLocaleString() });
-      localStorage.setItem("studentFeedbackMessages", JSON.stringify(feedbacks));
-      renderFeedbackSentTable();
-      alert("Feedback sent.");
-    }
-
-    function renderFeedbackSentTable() {
-      const feedbacks = JSON.parse(localStorage.getItem("studentFeedbackMessages")) || [];
-      const mine = feedbacks.filter(f => f.fromUsername === user.username).sort((a,b)=>b.id-a.id);
-      const body = document.querySelector("#teacherFeedbackTable tbody");
-      body.innerHTML = mine.length
-        ? mine.map(f => `<tr><td>${f.toUsername}</td><td>${f.message}</td><td>${f.createdAt}</td></tr>`).join("")
-        : '<tr><td colspan="3">No feedback sent yet.</td></tr>';
-    }
-
-    function renderTeacherInbox() {
-      const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
-      const mine = notes.filter(n => n.toUsername === user.username).sort((a,b)=>b.id-a.id);
-      const body = document.querySelector("#teacherInboxTable tbody");
-      body.innerHTML = mine.length
-        ? mine.map(n => `<tr><td>${n.fromUsername} (${n.fromRole})</td><td>${n.message}</td><td>${n.createdAt}</td></tr>`).join("")
-        : '<tr><td colspan="3">No notifications.</td></tr>';
-    }
-
-    function openStudentDetails(studentUsername) {
-      const acceptedUsernames = [...new Set(getAcceptedRequests().map(r => r.studentUsername))];
-      if (!acceptedUsernames.includes(studentUsername)) {
-        alert("This student is not in your accepted group.");
-        return;
-      }
-      localStorage.setItem("selectedStudentForTeacherView", studentUsername);
-      window.location.href = "student_detail.html";
-    }
-
-    function logout() {
-      localStorage.removeItem("currentUser");
-      window.location.href = "index.html";
-    }
-
+    localStorage.setItem("studentGroupRequests", JSON.stringify(reqs));
+    document.getElementById("studentRollNoInput").value = "";
+    alert("Request sent.");
     refreshDashboard();
-  </script>
+  }
+
+  function removeStudentFromGroup(studentUsername, groupName) {
+    const reqs = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
+    reqs.forEach(r => {
+      if ((String(r.teacherId) === String(user.id) || r.teacherUsername === user.username) && r.studentUsername === studentUsername && (r.groupName || "General") === groupName && r.status === "accepted") {
+        r.status = "removed_by_teacher";
+        r.removedAt = new Date().toLocaleString();
+      }
+    });
+    localStorage.setItem("studentGroupRequests", JSON.stringify(reqs));
+    refreshDashboard();
+  }
+
+  function removeGroup(groupName) {
+    const reqs = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
+    reqs.forEach(r => {
+      if ((String(r.teacherId) === String(user.id) || r.teacherUsername === user.username) && (r.groupName || "General") === groupName && ["pending", "accepted"].includes(r.status)) {
+        r.status = "removed_by_teacher";
+        r.removedAt = new Date().toLocaleString();
+      }
+    });
+    localStorage.setItem("studentGroupRequests", JSON.stringify(reqs));
+    refreshDashboard();
+  }
+
+  function sendNotificationToStudent() {
+    const toUsername = document.getElementById("notifyStudentSelect").value;
+    const message = document.getElementById("teacherNotificationMsg").value.trim();
+    if (!toUsername) { alert("No connected student selected."); return; }
+    if (!message) { alert("Notification message is required."); return; }
+
+    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+    notes.push({ id: Date.now(), fromUsername: user.username, fromRole: "teacher", toUsername, toRole: "student", message, createdAt: new Date().toLocaleString() });
+    localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
+    document.getElementById("teacherNotificationMsg").value = "";
+    alert("Notification sent.");
+  }
+
+  function sendFeedbackToStudent() {
+    const toUsername = document.getElementById("feedbackStudentSelect").value;
+    const message = document.getElementById("feedbackTemplate").value;
+    if (!toUsername) { alert("No connected student selected."); return; }
+
+    const feedbacks = JSON.parse(localStorage.getItem("studentFeedbackMessages")) || [];
+    feedbacks.push({ id: Date.now(), fromUsername: user.username, fromRole: "teacher", toUsername, message, createdAt: new Date().toLocaleString() });
+    localStorage.setItem("studentFeedbackMessages", JSON.stringify(feedbacks));
+    renderFeedbackSentTable();
+    alert("Feedback sent.");
+  }
+
+  function renderFeedbackSentTable() {
+    const feedbacks = JSON.parse(localStorage.getItem("studentFeedbackMessages")) || [];
+    const mine = feedbacks.filter(f => f.fromUsername === user.username).sort((a, b) => b.id - a.id);
+    const body = document.querySelector("#teacherFeedbackTable tbody");
+    body.innerHTML = mine.length
+      ? mine.map(f => `<tr><td>${f.toUsername}</td><td>${f.message}</td><td>${f.createdAt}</td></tr>`).join("")
+      : '<tr><td colspan="3">No feedback sent yet.</td></tr>';
+  }
+
+  function renderTeacherInbox() {
+    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+    const mine = notes.filter(n => n.toUsername === user.username).sort((a, b) => b.id - a.id);
+    const body = document.querySelector("#teacherInboxTable tbody");
+    body.innerHTML = mine.length
+      ? mine.map(n => `<tr><td>${n.fromUsername} (${n.fromRole})</td><td>${n.message}</td><td>${n.createdAt}</td></tr>`).join("")
+      : '<tr><td colspan="3">No notifications.</td></tr>';
+  }
+
+  function openStudentDetails(studentUsername) {
+    const acceptedUsernames = [...new Set(getAcceptedRequests().map(r => r.studentUsername))];
+    if (!acceptedUsernames.includes(studentUsername)) {
+      alert("This student is not in your accepted group.");
+      return;
+    }
+    localStorage.setItem("selectedStudentForTeacherView", studentUsername);
+    window.location.href = "student_detail.html";
+  }
+
+  async function loadApiData() {
+    try {
+      const meRes = await Api.me();
+      if (meRes?.user) {
+        user = meRes.user;
+        AppStore.setAuth(user, localStorage.getItem("token"));
+      }
+
+      const [testsRes, resultsRes, studentsRes] = await Promise.all([Api.getTests(), Api.getResults(), Api.getStudents()]);
+      tests = testsRes.tests || [];
+      results = resultsRes.results || [];
+      students = studentsRes.students || [];
+      AppStore.setTests(tests);
+      AppStore.setResults(results);
+    } catch (err) {
+      if ((err.message || "").toLowerCase().includes("token") || (err.message || "").toLowerCase().includes("authorization")) {
+        AppStore.clearAuth();
+        window.location.href = "index.html";
+        return;
+      }
+      alert(err.message || "Failed to load dashboard data");
+    }
+  }
+
+  function logout() {
+    AppStore.clearAuth();
+    window.location.href = "index.html";
+  }
+
+  (async function init() {
+    renderHeaderDetails();
+    await loadApiData();
+    renderHeaderDetails();
+    refreshDashboard();
+  })();
+</script>
 </body>
 </html>
+

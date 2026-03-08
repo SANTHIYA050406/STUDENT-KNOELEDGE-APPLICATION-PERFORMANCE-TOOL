@@ -1,4 +1,4 @@
-﻿package com.skapt.app.servlet;
+package com.skapt.app.servlet;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.skapt.app.config.Db;
@@ -58,6 +58,7 @@ public class ResultsServlet extends BaseServlet {
 
             json(res, HttpServletResponse.SC_OK, Map.of("results", results));
         } catch (Exception ex) {
+            logException("Request handling failed", ex);
             try { error(res, HttpServletResponse.SC_BAD_REQUEST, ex.getMessage()); } catch (Exception ignored) {}
         }
     }
@@ -122,6 +123,7 @@ public class ResultsServlet extends BaseServlet {
                 )));
             }
         } catch (Exception ex) {
+            logException("Request handling failed", ex);
             try { error(res, HttpServletResponse.SC_BAD_REQUEST, ex.getMessage()); } catch (Exception ignored) {}
         }
     }
@@ -155,6 +157,7 @@ public class ResultsServlet extends BaseServlet {
             }
             res.setStatus(HttpServletResponse.SC_NO_CONTENT);
         } catch (Exception ex) {
+            logException("Request handling failed", ex);
             try { error(res, HttpServletResponse.SC_BAD_REQUEST, ex.getMessage()); } catch (Exception ignored) {}
         }
     }
@@ -172,3 +175,5 @@ public class ResultsServlet extends BaseServlet {
         }
     }
 }
+
+

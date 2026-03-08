@@ -1,4 +1,4 @@
-﻿package com.skapt.app.servlet;
+package com.skapt.app.servlet;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.skapt.app.config.Db;
@@ -32,6 +32,7 @@ public class AuthServlet extends BaseServlet {
             }
             error(res, HttpServletResponse.SC_NOT_FOUND, "Route not found");
         } catch (Exception ex) {
+            logException("Request handling failed", ex);
             try { error(res, HttpServletResponse.SC_BAD_REQUEST, ex.getMessage()); } catch (Exception ignored) {}
         }
     }
@@ -53,6 +54,7 @@ public class AuthServlet extends BaseServlet {
             }
             json(res, HttpServletResponse.SC_OK, Map.of("user", user));
         } catch (Exception ex) {
+            logException("Request handling failed", ex);
             try { error(res, HttpServletResponse.SC_BAD_REQUEST, ex.getMessage()); } catch (Exception ignored) {}
         }
     }
@@ -175,3 +177,5 @@ public class AuthServlet extends BaseServlet {
     @SuppressWarnings("unchecked")
     private Map<String, Object> map(Object v) { return v == null ? null : (Map<String, Object>) v; }
 }
+
+

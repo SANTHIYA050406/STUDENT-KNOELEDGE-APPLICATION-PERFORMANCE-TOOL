@@ -1,4 +1,4 @@
-﻿package com.skapt.app.servlet;
+package com.skapt.app.servlet;
 
 import com.skapt.app.config.Db;
 import jakarta.servlet.annotation.WebServlet;
@@ -42,7 +42,10 @@ public class StudentsServlet extends BaseServlet {
 
             json(res, HttpServletResponse.SC_OK, Map.of("students", students));
         } catch (Exception ex) {
+            logException("Request handling failed", ex);
             try { error(res, HttpServletResponse.SC_BAD_REQUEST, ex.getMessage()); } catch (Exception ignored) {}
         }
     }
 }
+
+

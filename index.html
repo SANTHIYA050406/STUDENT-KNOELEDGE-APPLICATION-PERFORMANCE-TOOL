@@ -124,134 +124,134 @@
     </div>
   </div>
 
-  <script>
-    const Storage = {
-      getUsers: () => JSON.parse(localStorage.getItem("users")) || [],
-      saveUsers: (users) => localStorage.setItem("users", JSON.stringify(users)),
-      saveOrUpdateUser: (user) => {
-        const users = Storage.getUsers();
-        const index = users.findIndex(u => u.id === user.id || (u.username === user.username && u.role === user.role));
-        if (index === -1) users.push(user);
-        else users[index] = { ...users[index], ...user };
-        Storage.saveUsers(users);
+  <script src="js/store.js"></script>
+<script src="js/api.js"></script>
+<script>
+  const loginBtn = document.getElementById("loginBtn");
+  const saveStudentBtn = document.getElementById("saveStudentBtn");
+  const saveTeacherBtn = document.getElementById("saveTeacherBtn");
+
+  const studentSetup = document.getElementById("studentSetup");
+  const teacherSetup = document.getElementById("teacherSetup");
+
+  let pendingUser = null;
+  let pendingRole = null;
+
+  function showStudentSetup(user) {
+    teacherSetup.classList.add("hidden");
+    studentSetup.classList.remove("hidden");
+    document.getElementById("studentName").value = user?.studentProfile?.name || user?.username || "";
+    document.getElementById("studentRollNo").value = user?.studentProfile?.rollNo || "";
+    document.getElementById("studentDepartment").value = user?.studentProfile?.department || "";
+    document.getElementById("studentCgpa").value = user?.studentProfile?.cgpa ?? "";
+  }
+
+  function showTeacherSetup(user) {
+    studentSetup.classList.add("hidden");
+    teacherSetup.classList.remove("hidden");
+    document.getElementById("teacherName").value = user?.teacherProfile?.name || user?.username || "";
+    document.getElementById("facultyId").value = user?.teacherProfile?.facultyId || "";
+    document.getElementById("teacherDepartment").value = user?.teacherProfile?.department || "";
+  }
+
+  async function loginExisting(username, password, expectedRole) {
+    const { token, user } = await Api.login({ username, password });
+
+    if (expectedRole === "student" && user.role !== "student") {
+      throw new Error("This account is not a student account.");
+    }
+    if (expectedRole === "teacher" && !(user.role === "teacher" || user.role === "admin")) {
+      throw new Error("This account is not a teacher account.");
+    }
+
+    AppStore.setAuth(user, token);
+    window.location.href = expectedRole === "teacher" ? "admin_dashboard.html" : "dashboard.html";
+  }
+
+  loginBtn.addEventListener("click", async () => {
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const role = document.getElementById("role").value;
+
+    if (!username || !password) {
+      alert("Enter username and password.");
+      return;
+    }
+
+    try {
+      await loginExisting(username, password, role);
+      return;
+    } catch (err) {
+      const msg = String(err.message || "");
+      if (!msg.toLowerCase().includes("invalid credentials")) {
+        alert(msg);
+        return;
       }
+    }
+
+    pendingUser = { username, password };
+    pendingRole = role;
+    if (role === "student") showStudentSetup({ username });
+    else showTeacherSetup({ username });
+  });
+
+  saveStudentBtn.addEventListener("click", async () => {
+    if (!pendingUser || pendingRole !== "student") return;
+
+    const studentProfile = {
+      name: document.getElementById("studentName").value.trim(),
+      rollNo: document.getElementById("studentRollNo").value.trim(),
+      department: document.getElementById("studentDepartment").value.trim(),
+      cgpa: Number(document.getElementById("studentCgpa").value)
     };
 
-    const loginBtn = document.getElementById("loginBtn");
-    const saveStudentBtn = document.getElementById("saveStudentBtn");
-    const saveTeacherBtn = document.getElementById("saveTeacherBtn");
-
-    const studentSetup = document.getElementById("studentSetup");
-    const teacherSetup = document.getElementById("teacherSetup");
-
-    let pendingUser = null;
-    let pendingRole = null;
-
-    const hasStudentProfile = (p) => !!(p && p.name && p.rollNo && p.department && (p.cgpa || p.cgpa === 0));
-    const hasTeacherProfile = (p) => !!(p && p.name && p.facultyId && p.department);
-
-    function showStudentSetup(user) {
-      teacherSetup.classList.add("hidden");
-      studentSetup.classList.remove("hidden");
-      document.getElementById("studentName").value = user?.studentProfile?.name || user?.username || "";
-      document.getElementById("studentRollNo").value = user?.studentProfile?.rollNo || "";
-      document.getElementById("studentDepartment").value = user?.studentProfile?.department || "";
-      document.getElementById("studentCgpa").value = user?.studentProfile?.cgpa ?? "";
+    if (!studentProfile.name || !studentProfile.rollNo || !studentProfile.department || Number.isNaN(studentProfile.cgpa) || studentProfile.cgpa < 0 || studentProfile.cgpa > 10) {
+      alert("Enter valid student details and CGPA 0-10.");
+      return;
     }
 
-    function showTeacherSetup(user) {
-      studentSetup.classList.add("hidden");
-      teacherSetup.classList.remove("hidden");
-      document.getElementById("teacherName").value = user?.teacherProfile?.name || user?.username || "";
-      document.getElementById("facultyId").value = user?.teacherProfile?.facultyId || "";
-      document.getElementById("teacherDepartment").value = user?.teacherProfile?.department || "";
-    }
-
-    loginBtn.addEventListener("click", () => {
-      const username = document.getElementById("username").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const role = document.getElementById("role").value;
-
-      if (!username || !password) {
-        alert("Enter username and password.");
-        return;
-      }
-
-      const users = Storage.getUsers();
-      const roleMatches = role === "teacher" ? ["teacher", "admin"] : ["student"];
-      const existing = users.find(u => (u.username || "").toLowerCase() === username.toLowerCase() && roleMatches.includes(u.role));
-
-      if (!existing) {
-        pendingUser = { id: Date.now(), username, password, role };
-        pendingRole = role;
-        if (role === "student") showStudentSetup(pendingUser);
-        else showTeacherSetup(pendingUser);
-        return;
-      }
-
-      if (existing.password !== password) {
-        alert("Incorrect password.");
-        return;
-      }
-
-      pendingUser = { ...existing, role };
-      pendingRole = role;
-
-      if (role === "student" && !hasStudentProfile(existing.studentProfile)) {
-        showStudentSetup(existing);
-        return;
-      }
-      if (role === "teacher" && !hasTeacherProfile(existing.teacherProfile)) {
-        showTeacherSetup(existing);
-        return;
-      }
-
-      localStorage.setItem("currentUser", JSON.stringify(existing));
-      window.location.href = role === "teacher" ? "admin_dashboard.html" : "dashboard.html";
-    });
-
-    saveStudentBtn.addEventListener("click", () => {
-      if (!pendingUser || pendingRole !== "student") return;
-
-      const studentProfile = {
-        name: document.getElementById("studentName").value.trim(),
-        rollNo: document.getElementById("studentRollNo").value.trim(),
-        department: document.getElementById("studentDepartment").value.trim(),
-        cgpa: Number(document.getElementById("studentCgpa").value)
-      };
-
-      if (!studentProfile.name || !studentProfile.rollNo || !studentProfile.department || Number.isNaN(studentProfile.cgpa) || studentProfile.cgpa < 0 || studentProfile.cgpa > 10) {
-        alert("Enter valid student details and CGPA 0-10.");
-        return;
-      }
-
-      pendingUser.role = "student";
-      pendingUser.studentProfile = studentProfile;
-      Storage.saveOrUpdateUser(pendingUser);
-      localStorage.setItem("currentUser", JSON.stringify(pendingUser));
+    try {
+      const { token, user } = await Api.register({
+        username: pendingUser.username,
+        password: pendingUser.password,
+        role: "student",
+        studentProfile
+      });
+      AppStore.setAuth(user, token);
       window.location.href = "dashboard.html";
-    });
+    } catch (err) {
+      alert(err.message || "Failed to register student.");
+    }
+  });
 
-    saveTeacherBtn.addEventListener("click", () => {
-      if (!pendingUser || pendingRole !== "teacher") return;
+  saveTeacherBtn.addEventListener("click", async () => {
+    if (!pendingUser || pendingRole !== "teacher") return;
 
-      const teacherProfile = {
-        name: document.getElementById("teacherName").value.trim(),
-        facultyId: document.getElementById("facultyId").value.trim(),
-        department: document.getElementById("teacherDepartment").value.trim()
-      };
+    const teacherProfile = {
+      name: document.getElementById("teacherName").value.trim(),
+      facultyId: document.getElementById("facultyId").value.trim(),
+      department: document.getElementById("teacherDepartment").value.trim()
+    };
 
-      if (!teacherProfile.name || !teacherProfile.facultyId || !teacherProfile.department) {
-        alert("Enter teacher name, faculty ID, and department.");
-        return;
-      }
+    if (!teacherProfile.name || !teacherProfile.facultyId || !teacherProfile.department) {
+      alert("Enter teacher name, faculty ID, and department.");
+      return;
+    }
 
-      pendingUser.role = "teacher";
-      pendingUser.teacherProfile = teacherProfile;
-      Storage.saveOrUpdateUser(pendingUser);
-      localStorage.setItem("currentUser", JSON.stringify(pendingUser));
+    try {
+      const { token, user } = await Api.register({
+        username: pendingUser.username,
+        password: pendingUser.password,
+        role: "teacher",
+        teacherProfile
+      });
+      AppStore.setAuth(user, token);
       window.location.href = "admin_dashboard.html";
-    });
-  </script>
+    } catch (err) {
+      alert(err.message || "Failed to register teacher.");
+    }
+  });
+</script>
 </body>
 </html>
+

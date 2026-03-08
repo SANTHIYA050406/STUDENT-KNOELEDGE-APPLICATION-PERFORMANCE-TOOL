@@ -1,4 +1,4 @@
-﻿# Student Knowledge Application Performance Tool
+# Student Knowledge Application Performance Tool
 
 ## Stack
 - Backend: Java Servlet API + JDBC + MySQL + JWT
@@ -20,17 +20,18 @@
 2. Open `index.html`.
 
 ## Implemented Requirements
-- RESTful API routes for auth/tests/results/users.
+- RESTful API routes for auth/tests/results/users/documents.
 - Database integration using JDBC with MySQL schema auto-init.
 - JWT authentication and role-based authorization via servlet filter.
 - Full-stack CRUD:
   - Tests create/read/update/delete from teacher UI (`create_test.html`)
   - Results create/read/delete from student UI (`take_test.html`, `dashboard.html`)
+  - Student documents upload/read (academics, certifications, competition) from UI and teacher detail view
 - Client-side state management in `js/store.js`.
 - Error handling and security:
   - Input checks in servlet handlers.
   - Security headers and CORS in `AuthFilter`.
-  - Basic backend logging through server runtime logs.
+  - Basic backend logging through servlet and filter logs.
 
 ## API Testing
 - Postman collection: `postman/skapt-java-api.postman_collection.json`
@@ -41,5 +42,6 @@
 - `TestsServlet`: test CRUD
 - `ResultsServlet`: submit/list/delete results
 - `StudentsServlet`: teacher/admin student listing
+- `DocumentsServlet`: academics/certifications/competition upload + listing
 - `AuthFilter`: token verification and secure headers
 - `Db`: MySQL connection + table creation

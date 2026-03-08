@@ -1,4 +1,4 @@
-﻿package com.skapt.app.config;
+package com.skapt.app.config;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -67,10 +67,54 @@ public final class Db {
             )
         """;
 
+        String academicMarksheets = """
+            CREATE TABLE IF NOT EXISTS academic_marksheets (
+                id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                student_id BIGINT NOT NULL,
+                semester_no INT NOT NULL,
+                file_name VARCHAR(255) NOT NULL,
+                pdf_name VARCHAR(255) NOT NULL,
+                pdf_data_url LONGTEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_marksheet_user FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """;
+
+        String courseCertifications = """
+            CREATE TABLE IF NOT EXISTS course_certifications (
+                id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                student_id BIGINT NOT NULL,
+                cert_name VARCHAR(255) NOT NULL,
+                cert_link TEXT,
+                pdf_name VARCHAR(255) NOT NULL,
+                pdf_data_url LONGTEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_cert_user FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """;
+
+        String competitionCertificates = """
+            CREATE TABLE IF NOT EXISTS competition_certificates (
+                id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                student_id BIGINT NOT NULL,
+                competition_name VARCHAR(255) NOT NULL,
+                competition_date DATE NOT NULL,
+                online_link TEXT,
+                pdf_name VARCHAR(255),
+                pdf_data_url LONGTEXT,
+                geo_proofs_json LONGTEXT NOT NULL,
+                uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_competition_user FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """;
+
         try (Connection conn = getConnection(); Statement st = conn.createStatement()) {
             st.execute(users);
             st.execute(tests);
             st.execute(results);
+            st.execute(academicMarksheets);
+            st.execute(courseCertifications);
+            st.execute(competitionCertificates);
         } catch (Exception ex) {
             throw new RuntimeException("Schema initialization failed", ex);
         }

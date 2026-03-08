@@ -1,15 +1,18 @@
-﻿package com.skapt.app.servlet;
+package com.skapt.app.servlet;
 
 import com.skapt.app.util.JsonUtil;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.Map;
 
 public abstract class BaseServlet extends HttpServlet {
+    protected final Logger logger = LoggerFactory.getLogger(getClass());
 
     protected String body(HttpServletRequest req) throws IOException {
         StringBuilder sb = new StringBuilder();
@@ -41,5 +44,9 @@ public abstract class BaseServlet extends HttpServlet {
         }
         error(res, HttpServletResponse.SC_FORBIDDEN, "Forbidden: insufficient permissions");
         return false;
+    }
+
+    protected void logException(String context, Exception ex) {
+        logger.error(context, ex);
     }
 }
