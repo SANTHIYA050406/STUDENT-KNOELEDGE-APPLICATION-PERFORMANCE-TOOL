@@ -1,60 +1,409 @@
-﻿{
+{
   "info": {
     "name": "SKAPT Java API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "Auth Register",
+      "name": "Auth - Register Student",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "url": { "raw": "http://localhost:8080/api/auth/register", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "auth", "register"] },
-        "body": { "mode": "raw", "raw": "{\n  \"username\": \"student1\",\n  \"password\": \"password123\",\n  \"role\": \"student\",\n  \"studentProfile\": {\n    \"name\": \"Student One\",\n    \"rollNo\": \"CSE001\",\n    \"department\": \"CSE\",\n    \"cgpa\": 8.4\n  }\n}" }
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "register"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"student1\",\n  \"password\": \"password123\",\n  \"role\": \"student\",\n  \"studentProfile\": {\n    \"name\": \"Student One\",\n    \"rollNo\": \"CSE001\",\n    \"department\": \"CSE\",\n    \"cgpa\": 8.4\n  }\n}"
+        }
       }
     },
     {
-      "name": "Auth Login",
+      "name": "Auth - Register Teacher",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "url": { "raw": "http://localhost:8080/api/auth/login", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "auth", "login"] },
-        "body": { "mode": "raw", "raw": "{\n  \"username\": \"student1\",\n  \"password\": \"password123\"\n}" }
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "register"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"teacher1\",\n  \"password\": \"password123\",\n  \"role\": \"teacher\",\n  \"teacherProfile\": {\n    \"name\": \"Teacher One\",\n    \"facultyId\": \"FAC1001\",\n    \"department\": \"CSE\"\n  }\n}"
+        }
       }
     },
     {
-      "name": "Create Test",
+      "name": "Auth - Login Student",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
-        "url": { "raw": "http://localhost:8080/api/tests", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "tests"] },
-        "body": { "mode": "raw", "raw": "{\n  \"subject\": \"Java\",\n  \"title\": \"Core Java Quiz\",\n  \"duration\": 30,\n  \"questions\": [\n    {\n      \"text\": \"JVM stands for?\",\n      \"options\": [\"Java Virtual Machine\",\"Java Variable Method\",\"Joint Virtual Model\",\"None\"],\n      \"answer\": \"A\"\n    }\n  ]\n}" }
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "login"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"student1\",\n  \"password\": \"password123\"\n}"
+        }
       }
     },
     {
-      "name": "List Tests",
+      "name": "Auth - Login Teacher",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "login"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"teacher1\",\n  \"password\": \"password123\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Auth - Me",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-        "url": { "raw": "http://localhost:8080/api/tests", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "tests"] }
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/me",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "me"]
+        }
       }
     },
     {
-      "name": "Submit Result",
+      "name": "Tests - Create",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
-        "url": { "raw": "http://localhost:8080/api/results", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "results"] },
-        "body": { "mode": "raw", "raw": "{\n  \"testId\": 1,\n  \"answers\": [\"A\"]\n}" }
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{teacherToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tests",
+          "host": ["{{baseUrl}}"],
+          "path": ["tests"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"subject\": \"Java\",\n  \"title\": \"Core Java Quiz\",\n  \"duration\": 30,\n  \"questions\": [\n    {\n      \"text\": \"JVM stands for?\",\n      \"options\": [\"Java Virtual Machine\", \"Java Variable Method\", \"Joint Virtual Model\", \"None\"],\n      \"answer\": \"A\"\n    }\n  ]\n}"
+        }
       }
     },
     {
-      "name": "List Results",
+      "name": "Tests - List",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-        "url": { "raw": "http://localhost:8080/api/results", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "results"] }
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tests",
+          "host": ["{{baseUrl}}"],
+          "path": ["tests"]
+        }
+      }
+    },
+    {
+      "name": "Tests - Get By Id",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tests/{{testId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["tests", "{{testId}}"]
+        }
+      }
+    },
+    {
+      "name": "Tests - Update",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{teacherToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tests/{{testId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["tests", "{{testId}}"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"subject\": \"Java\",\n  \"title\": \"Core Java Quiz Updated\",\n  \"duration\": 35,\n  \"questions\": [\n    {\n      \"text\": \"JVM stands for?\",\n      \"options\": [\"Java Virtual Machine\", \"Java Variable Method\", \"Joint Virtual Model\", \"None\"],\n      \"answer\": \"A\"\n    }\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "Results - Submit",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/results",
+          "host": ["{{baseUrl}}"],
+          "path": ["results"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"testId\": {{testId}},\n  \"answers\": [\"A\"]\n}"
+        }
+      }
+    },
+    {
+      "name": "Results - List Student",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/results",
+          "host": ["{{baseUrl}}"],
+          "path": ["results"]
+        }
+      }
+    },
+    {
+      "name": "Results - List Teacher",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{teacherToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/results",
+          "host": ["{{baseUrl}}"],
+          "path": ["results"]
+        }
+      }
+    },
+    {
+      "name": "Users - Students",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{teacherToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/users/students",
+          "host": ["{{baseUrl}}"],
+          "path": ["users", "students"]
+        }
+      }
+    },
+    {
+      "name": "Documents - Upload Academics",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/documents/academics",
+          "host": ["{{baseUrl}}"],
+          "path": ["documents", "academics"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"semesterNo\": 1,\n  \"fileName\": \"CSE001.semester-1 marksheet.pdf\",\n  \"pdfProof\": {\n    \"name\": \"CSE001.semester-1 marksheet.pdf\",\n    \"dataUrl\": \"data:application/pdf;base64,JVBERi0xLjcK...\"\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "Documents - List Academics Self",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/documents/academics",
+          "host": ["{{baseUrl}}"],
+          "path": ["documents", "academics"]
+        }
+      }
+    },
+    {
+      "name": "Documents - List Academics By Student",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{teacherToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/documents/academics?studentUsername=student1",
+          "host": ["{{baseUrl}}"],
+          "path": ["documents", "academics"],
+          "query": [
+            { "key": "studentUsername", "value": "student1" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Documents - Upload Certification",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/documents/certifications",
+          "host": ["{{baseUrl}}"],
+          "path": ["documents", "certifications"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"certName\": \"Java Fundamentals\",\n  \"certLink\": \"https://example.com/cert\",\n  \"pdfProof\": {\n    \"name\": \"java-fundamentals.pdf\",\n    \"dataUrl\": \"data:application/pdf;base64,JVBERi0xLjcK...\"\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "Documents - List Certifications Self",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/documents/certifications",
+          "host": ["{{baseUrl}}"],
+          "path": ["documents", "certifications"]
+        }
+      }
+    },
+    {
+      "name": "Documents - List Certifications By Student",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{teacherToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/documents/certifications?studentUsername=student1",
+          "host": ["{{baseUrl}}"],
+          "path": ["documents", "certifications"],
+          "query": [
+            { "key": "studentUsername", "value": "student1" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Documents - Upload Competition",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/documents/competition",
+          "host": ["{{baseUrl}}"],
+          "path": ["documents", "competition"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"competitionName\": \"Hackathon 2026\",\n  \"competitionDate\": \"2026-03-01\",\n  \"onlineLink\": \"https://example.com/hackathon-cert\",\n  \"pdfProof\": {\n    \"name\": \"hackathon.pdf\",\n    \"dataUrl\": \"data:application/pdf;base64,JVBERi0xLjcK...\"\n  },\n  \"geoProofs\": [\n    {\n      \"name\": \"photo1.jpg\",\n      \"dataUrl\": \"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ...\"\n    }\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "Documents - List Competition Self",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/documents/competition",
+          "host": ["{{baseUrl}}"],
+          "path": ["documents", "competition"]
+        }
+      }
+    },
+    {
+      "name": "Documents - List Competition By Student",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{teacherToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/documents/competition?studentUsername=student1",
+          "host": ["{{baseUrl}}"],
+          "path": ["documents", "competition"],
+          "query": [
+            { "key": "studentUsername", "value": "student1" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Negative - Student Create Test (Forbidden)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tests",
+          "host": ["{{baseUrl}}"],
+          "path": ["tests"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"subject\": \"Unauthorized\",\n  \"title\": \"Should Fail\",\n  \"duration\": 30,\n  \"questions\": [\n    {\n      \"text\": \"Q\",\n      \"options\": [\"A\",\"B\",\"C\",\"D\"],\n      \"answer\": \"A\"\n    }\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "Negative - Missing Token",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/results",
+          "host": ["{{baseUrl}}"],
+          "path": ["results"]
+        }
       }
     }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api" },
+    { "key": "studentToken", "value": "" },
+    { "key": "teacherToken", "value": "" },
+    { "key": "testId", "value": "1" },
+    { "key": "resultId", "value": "1" }
   ]
 }
