@@ -1,4 +1,4 @@
-﻿package com.skapt.app.config;
+package com.skapt.app.config;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;

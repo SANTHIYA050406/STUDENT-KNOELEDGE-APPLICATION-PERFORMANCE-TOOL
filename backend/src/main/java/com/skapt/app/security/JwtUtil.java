@@ -1,4 +1,4 @@
-﻿package com.skapt.app.security;
+package com.skapt.app.security;
 
 import com.skapt.app.config.AppConfig;
 import io.jsonwebtoken.Claims;

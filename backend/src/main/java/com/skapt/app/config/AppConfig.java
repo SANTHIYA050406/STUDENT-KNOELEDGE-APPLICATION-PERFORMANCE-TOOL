@@ -1,4 +1,4 @@
-﻿package com.skapt.app.config;
+package com.skapt.app.config;
 
 import java.io.InputStream;
 import java.util.Properties;

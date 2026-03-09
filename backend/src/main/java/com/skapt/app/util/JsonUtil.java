@@ -1,4 +1,4 @@
-﻿package com.skapt.app.util;
+package com.skapt.app.util;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
