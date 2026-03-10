@@ -83,6 +83,48 @@
       background: linear-gradient(135deg, var(--brand), var(--brand-2));
     }
 
+    .hint {
+      margin: -6px 0 10px;
+      font-size: 12px;
+      color: #b42318;
+    }
+
+    .pw-wrap {
+      position: relative;
+      margin-bottom: 10px;
+    }
+
+    .pw-wrap input {
+      margin-bottom: 0;
+      padding-right: 44px;
+    }
+
+    .pw-toggle {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 1px solid #cad6e6;
+      background: #ffffff;
+      color: #1e2a3a;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      padding: 0;
+      margin: 0;
+    }
+
+    .pw-toggle:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px #dbe7ff;
+      border-color: #2f63b4;
+    }
+
+    .pw-toggle svg { width: 18px; height: 18px; }
+
     .hidden { display: none; }
 
     .setup-box {
@@ -97,7 +139,18 @@
     <h2>Login</h2>
 
     <input type="text" id="username" placeholder="Username" />
-    <input type="password" id="password" placeholder="Password" />
+    <p class="hint">Username must be at least 3 characters.</p>
+
+    <div class="pw-wrap">
+      <input type="password" id="password" placeholder="Password" />
+      <button type="button" class="pw-toggle" id="togglePassword" aria-label="Show password">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      </button>
+    </div>
+    <p class="hint">Password must be at least 6 characters.</p>
     <select id="role">
       <option value="student">Student</option>
       <option value="teacher">Teacher</option>
@@ -133,9 +186,17 @@
 
   const studentSetup = document.getElementById("studentSetup");
   const teacherSetup = document.getElementById("teacherSetup");
+  const togglePassword = document.getElementById("togglePassword");
 
   let pendingUser = null;
   let pendingRole = null;
+
+  togglePassword.addEventListener("click", () => {
+    const input = document.getElementById("password");
+    const showing = input.type === "text";
+    input.type = showing ? "password" : "text";
+    togglePassword.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+  });
 
   function showStudentSetup(user) {
     teacherSetup.classList.add("hidden");
@@ -262,5 +323,6 @@
 </script>
 </body>
 </html>
+
 
 
