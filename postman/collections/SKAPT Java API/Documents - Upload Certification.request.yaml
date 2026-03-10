@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/documents/certifications"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{studentToken}}
+body:
+  type: text
+  content: |-
+    {
+      "certName": "Java Fundamentals",
+      "certLink": "https://example.com/cert",
+      "pdfProof": {
+        "name": "java-fundamentals.pdf",
+        "dataUrl": "data:application/pdf;base64,JVBERi0xLjcK..."
+      }
+    }
+order: 17000

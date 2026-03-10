@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 public abstract class BaseServlet extends HttpServlet {
@@ -32,7 +33,9 @@ public abstract class BaseServlet extends HttpServlet {
     }
 
     protected void error(HttpServletResponse res, int status, String message) throws IOException {
-        json(res, status, Map.of("error", message));
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("error", message == null ? "" : message);
+        json(res, status, payload);
     }
 
     protected boolean requireRole(HttpServletRequest req, HttpServletResponse res, String... roles) throws IOException {

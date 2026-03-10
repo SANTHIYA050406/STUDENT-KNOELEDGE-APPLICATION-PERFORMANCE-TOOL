@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/users/students"
+method: GET
+headers:
+  Authorization: Bearer {{teacherToken}}
+order: 13000

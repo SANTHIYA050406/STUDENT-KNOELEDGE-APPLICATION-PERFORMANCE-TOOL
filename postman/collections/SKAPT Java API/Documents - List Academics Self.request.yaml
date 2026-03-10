@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/documents/academics"
+method: GET
+headers:
+  Authorization: Bearer {{studentToken}}
+order: 15000

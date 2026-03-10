@@ -1,0 +1,25 @@
+$kind: http-request
+url: "{{baseUrl}}/documents/competition"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{studentToken}}
+body:
+  type: text
+  content: |-
+    {
+      "competitionName": "Hackathon 2026",
+      "competitionDate": "2026-03-01",
+      "onlineLink": "https://example.com/hackathon-cert",
+      "pdfProof": {
+        "name": "hackathon.pdf",
+        "dataUrl": "data:application/pdf;base64,JVBERi0xLjcK..."
+      },
+      "geoProofs": [
+        {
+          "name": "photo1.jpg",
+          "dataUrl": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ..."
+        }
+      ]
+    }
+order: 20000

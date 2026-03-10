@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "username": "student1",
+      "password": "password123",
+      "role": "student",
+      "studentProfile": {
+        "name": "Student One",
+        "rollNo": "CSE001",
+        "department": "CSE",
+        "cgpa": 8.4
+      }
+    }
+order: 1000

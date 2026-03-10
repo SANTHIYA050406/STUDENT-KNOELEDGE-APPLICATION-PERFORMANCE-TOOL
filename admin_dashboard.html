@@ -291,17 +291,38 @@
       : '<tr><td colspan="4">No results from accepted students.</td></tr>';
   }
 
-  function sendGroupRequest() {
+  async function sendGroupRequest() {
     const groupName = document.getElementById("groupName").value.trim() || "General";
     const studentRollNo = document.getElementById("studentRollNoInput").value.trim();
     if (!studentRollNo) {
-      alert("Enter student roll number.");
+      alert("Enter student roll number or username.");
       return;
     }
 
-    const student = students.find(s => ((s.studentProfile?.rollNo || "").trim().toLowerCase() === studentRollNo.toLowerCase()));
+    if (!students || students.length === 0) {
+      try {
+        const studentsRes = await Api.getStudents({ rollNo: studentRollNo, username: studentRollNo });
+        students = studentsRes.students || [];
+      } catch (err) {
+        alert(err.message || "Failed to load students list.");
+        return;
+      }
+    }
+
+    const inputRaw = studentRollNo.toLowerCase();
+    const normalize = (v) => (v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const inputNorm = normalize(inputRaw);
+    const student = students.find(s => {
+      const roll = (s.studentProfile?.rollNo || "").trim();
+      const uname = (s.username || "").trim();
+      const rollNorm = normalize(roll);
+      const unameNorm = normalize(uname);
+      return rollNorm === inputNorm || unameNorm === inputNorm ||
+        (rollNorm && inputNorm.includes(rollNorm)) || (unameNorm && inputNorm.includes(unameNorm));
+    });
     if (!student) {
-      alert("Student not found for this roll number.");
+      const known = students.map(s => (s.studentProfile?.rollNo || s.username || "")).filter(Boolean).join(", ");
+      alert("Student not found. Known roll numbers or usernames: " + (known || "none"));
       return;
     }
 
@@ -453,4 +474,9 @@
 </script>
 </body>
 </html>
+
+
+
+
+
 

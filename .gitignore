@@ -1,0 +1,19 @@
+# Java / Maven
+backend/target/
+*.class
+*.war
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+
+# Optional tooling
+.postman/

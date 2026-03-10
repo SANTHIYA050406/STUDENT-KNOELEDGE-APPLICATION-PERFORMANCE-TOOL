@@ -1,0 +1,7 @@
+$kind: collection
+variables:
+  baseUrl: http://localhost:8080/api
+  studentToken: ""
+  teacherToken: ""
+  testId: "1"
+  resultId: "1"

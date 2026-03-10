@@ -177,6 +177,14 @@
       alert("Enter username and password.");
       return;
     }
+    if (username.length < 3) {
+      alert("Username must be at least 3 characters.");
+      return;
+    }
+    if (password.length < 6) {
+      alert("Password must be at least 6 characters.");
+      return;
+    }
 
     try {
       await loginExisting(username, password, role);
@@ -254,4 +262,5 @@
 </script>
 </body>
 </html>
+
 

@@ -1,0 +1,21 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/results"
+  method: GET
+response:
+  statusCode: 401
+  statusText: Unauthorized
+  headers:
+    date: Mon, 09 Mar 2026 17:54:41 GMT
+    access-control-allow-origin: "*"
+    access-control-allow-methods: GET,POST,PUT,DELETE,OPTIONS
+    access-control-allow-headers: Content-Type, Authorization
+    x-content-type-options: nosniff
+    x-frame-options: SAMEORIGIN
+    referrer-policy: strict-origin-when-cross-origin
+    content-length: "43"
+    server: Jetty(11.0.24)
+  body:
+    type: text
+    content: '{"error":"Authorization token is required"}'
+order: 1773079319464

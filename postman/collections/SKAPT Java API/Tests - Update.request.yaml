@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/tests/{{testId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{teacherToken}}
+body:
+  type: text
+  content: >-
+    {
+      "subject": "Java",
+      "title": "Core Java Quiz Updated",
+      "duration": 35,
+      "questions": [
+        {
+          "text": "JVM stands for?",
+          "options": ["Java Virtual Machine", "Java Variable Method", "Joint Virtual Model", "None"],
+          "answer": "A"
+        }
+      ]
+    }
+order: 9000

@@ -1,176 +1,141 @@
-document.addEventListener("DOMContentLoaded", () => {
-
-    // ===== Get Current User =====
-    const user = Storage.getCurrentUser();
+document.addEventListener("DOMContentLoaded", async () => {
+    let user = AppStore.getState().user || JSON.parse(localStorage.getItem("currentUser") || "null");
     if (!user) {
-        window.location.href = "index.html";
+        window.location.href = "index2.html";
         return;
     }
 
-    const navAction = document.getElementById("navAction");
+    if (user.role !== "student") {
+        window.location.href = "admin_dashboard.html";
+        return;
+    }
 
-    if (navAction) {
-        // ===== ROLE CHECK =====
-        if (user.role === "admin") {
-            navAction.textContent = "Create Test";
-            navAction.href = "create_test.html";
-
-            const chartCanvas = document.getElementById("performanceChart");
-            if (chartCanvas) {
-                chartCanvas.style.display = "none";
-            }
-        } else {
-            navAction.textContent = "My Dashboard";
+    try {
+        const meRes = await Api.me();
+        if (meRes && meRes.user) {
+            user = meRes.user;
+            AppStore.setAuth(user, localStorage.getItem("token"));
         }
+    } catch (err) {
+        const msg = String(err.message || "").toLowerCase();
+        if (msg.includes("token") || msg.includes("authorization")) {
+            AppStore.clearAuth();
+            window.location.href = "index2.html";
+            return;
+        }
+        alert(err.message || "Failed to validate session.");
+        return;
     }
 
-    // ===== FETCH DATA =====
-const tests = Storage.getTests() || [];
-const results = Storage.getResults() || [];
+    let tests = [];
+    let results = [];
 
-console.log("All Results:", results);
-console.log("Current User:", user);
-console.log("User ID:", user.id);
+    try {
+        const [testsRes, resultsRes] = await Promise.all([Api.getTests(), Api.getResults()]);
+        tests = testsRes.tests || [];
+        results = resultsRes.results || [];
+        AppStore.setTests(tests);
+        AppStore.setResults(results);
+    } catch (err) {
+        alert(err.message || "Failed to load dashboard data");
+        return;
+    }
 
-// Check result IDs
-results.forEach(r => {
-    console.log("Result studentId:", r.studentId);
-});
+    const userResults = results.filter(r => {
+        if (r.studentId && user.id) return Number(r.studentId) === Number(user.id);
+        if (r.studentUsername) return r.studentUsername === user.username;
+        return r.username === user.username;
+    });
 
-const userResults = results.filter(r => r.studentId === user.id);
+    const totalTests = tests.length;
+    const attempted = userResults.length;
+    const avgScore = attempted
+        ? Math.round(userResults.reduce((s, r) => s + Number(r.score || 0), 0) / attempted)
+        : 0;
 
-console.log("Filtered User Results:", userResults);
+    const historyRows = userResults.length
+        ? userResults.map(r => {
+            const test = tests.find(t => Number(t.id) === Number(r.testId));
+            const dateText = r.submittedAt ? new Date(r.submittedAt).toLocaleDateString() : (r.date || "-");
+            return `<tr><td>${test ? test.title : (r.testTitle || "Test")}</td><td>${r.score}%</td><td>${dateText}</td></tr>`;
+        }).join("")
+        : '<tr><td colspan="3">No tests attempted yet.</td></tr>';
 
-
-    // ================= TOP SECTION =================
-   const topSection = document.getElementById("topSection");
-
-if (topSection) {
-    topSection.innerHTML = `
-        <div class="card stat-card">
-            <div class="icon blue"></div>
-            <h2>${totalTests}</h2>
-            <p>Total Tests</p>
-        </div>
-
-        <div class="card stat-card">
-            <div class="icon purple"></div>
-            <h2>${attempted}</h2>
-            <p>Tests Attempted</p>
-        </div>
-
-        <div class="card stat-card">
-            <div class="icon orange"></div>
-            <h2>${avgScore}%</h2>
-            <p>Avg. Score</p>
-        </div>
-
-        <div class="card history-card">
-            <h3>History</h3>
-            <div class="history-list">
-                ${
-                    userResults.length === 0
-                    ? "<p>No tests attempted yet.</p>"
-                    : userResults.map(r => {
-                        const test = tests.find(t => t.id === r.testId);
-                        return `
-                            <div class="history-item">
-                                <span>${test ? test.title : "Test"}</span>
-                                <span class="score">${r.score}%</span>
-                            </div>
-                        `;
-                    }).join("")
-                }
+    const topSection = document.getElementById("topSection");
+    if (topSection) {
+        topSection.innerHTML = `
+            <div class="card stat-card">
+                <h2>${totalTests}</h2>
+                <p>Total Tests</p>
             </div>
-        </div>
-    `;
-}
-//feedback
-const feedbackSection = document.getElementById("feedbackSection");
 
-if (feedbackSection) {
+            <div class="card stat-card">
+                <h2>${attempted}</h2>
+                <p>Tests Attempted</p>
+            </div>
 
-    let strength = "";
-    let growth = "";
+            <div class="card stat-card">
+                <h2>${avgScore}%</h2>
+                <p>Avg. Score</p>
+            </div>
 
-    if (avgScore >= 80) {
-        strength = "Excellent mastery of the subject.";
-        growth = "Try applying concepts in real-world projects.";
-    } 
-    else if (avgScore >= 50) {
-        strength = "Good understanding of fundamentals.";
-        growth = "Focus on improving weak topics.";
-    } 
-    else {
-        strength = "You are building your foundation.";
-        growth = "Revise basics and retake tests.";
+            <div class="card result-card">
+                <h3>History</h3>
+                <table>
+                    <thead><tr><th>Test</th><th>Score</th><th>Date</th></tr></thead>
+                    <tbody>${historyRows}</tbody>
+                </table>
+            </div>
+        `;
     }
 
-    feedbackSection.innerHTML = `
-        <div class="feedback good">
-            <h3>Strength Identified</h3>
-            <p>${strength}</p>
-        </div>
-
-        <div class="feedback improve">
-            <h3>Growth Opportunity</h3>
-            <p>${growth}</p>
-        </div>
-    `;
-}
-
-
-    // ================= AVAILABLE TESTS =================
     const testsSection = document.getElementById("testsSection");
     if (testsSection) {
-        testsSection.innerHTML = tests.map((test, index) => `
+        testsSection.innerHTML = tests.map(test => `
             <div class="card test-card">
                 <h3>${test.title}</h3>
                 <p><strong>Subject:</strong> ${test.subject}</p>
-                ${user.role === "student" ? `<button onclick="startTest(${index})">Take Test</button>` : ""}
+                <button onclick="startTest(${test.id})">Take Test</button>
             </div>
         `).join("");
     }
 
-    // ================= PERFORMANCE GRAPH =================
     const chartCanvas = document.getElementById("performanceChart");
-    if (user.role === "student" && userResults.length > 0 && chartCanvas) {
-        const ctx = chartCanvas.getContext("2d");
+    if (chartCanvas) {
+        const fresh = chartCanvas.cloneNode(false);
+        chartCanvas.parentNode.replaceChild(fresh, chartCanvas);
 
-        new Chart(ctx, {
-            type: "line",
-            data: {
-                labels: userResults.map(r => r.date),
-                datasets: [{
-                    label: "Score (%)",
-                    data: userResults.map(r => r.score),
-                    borderColor: "#667eea",
-                    backgroundColor: "rgba(102, 126, 234, 0.2)",
-                    tension: 0.3,
-                    fill: true
-                }]
-            },
-            options:{
-    responsive: true,
-    maintainAspectRatio: false,
-    scales:{
-        y:{ beginAtZero:true, max:100 }
+        if (userResults.length) {
+            const ctx = fresh.getContext("2d");
+            new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: userResults.map(r => r.date || (r.submittedAt ? new Date(r.submittedAt).toLocaleDateString() : "-")),
+                    datasets: [{
+                        label: "Score (%)",
+                        data: userResults.map(r => Number(r.score || 0)),
+                        borderColor: "#667eea",
+                        backgroundColor: "rgba(102, 126, 234, 0.2)",
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, max: 100 } }
+                }
+            });
+        }
     }
-}
-
-        });
-    }
-
 });
 
-// ===== START TEST =====
-function startTest(index) {
-    localStorage.setItem("selectedTestIndex", index);
+function startTest(id) {
+    localStorage.setItem("selectedTestId", id);
     window.location.href = "take_test.html";
 }
 
-// ===== LOGOUT =====
 function logout() {
-    localStorage.removeItem("currentUser");
-    window.location.href = "index.html";
+    AppStore.clearAuth();
+    window.location.href = "index2.html";
 }

@@ -22,7 +22,7 @@ async function request(path, options = {}) {
         throw new Error(payload?.error || `Request failed: ${response.status}`);
     }
 
-    return payload;
+    return payload ?? {};
 }
 
 window.Api = {
@@ -70,8 +70,9 @@ window.Api = {
         return request(`/results/${id}`, { method: "DELETE" });
     },
 
-    getStudents() {
-        return request("/users/students");
+    getStudents(query) {
+        const q = query ? `?${new URLSearchParams(query).toString()}` : "";
+        return request(`/users/students${q}`);
     },
 
     getAcademicDocuments(studentUsername) {
@@ -101,3 +102,5 @@ window.Api = {
         return request("/documents/competition", { method: "POST", body: JSON.stringify(data) });
     }
 };
+
+

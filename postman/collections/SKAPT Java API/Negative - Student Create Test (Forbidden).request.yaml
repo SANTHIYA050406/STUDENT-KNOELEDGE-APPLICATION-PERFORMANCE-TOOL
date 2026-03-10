@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/tests"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{studentToken}}
+body:
+  type: text
+  content: |-
+    {
+      "subject": "Unauthorized",
+      "title": "Should Fail",
+      "duration": 30,
+      "questions": [
+        {
+          "text": "Q",
+          "options": ["A","B","C","D"],
+          "answer": "A"
+        }
+      ]
+    }
+order: 23000
