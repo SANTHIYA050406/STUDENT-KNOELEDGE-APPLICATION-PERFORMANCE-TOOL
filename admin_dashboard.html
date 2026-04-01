@@ -35,6 +35,94 @@
       box-shadow: 0 8px 20px rgba(19, 37, 69, 0.2);
     }
     .header nav a { color: #fff; text-decoration: none; margin-left: 18px; font-weight: 700; }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .notification-area {
+      position: relative;
+    }
+    .notification-bell {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.45);
+      background: rgba(255,255,255,.15);
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      position: relative;
+    }
+    .notification-count {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: #facc15;
+      color: #1f2a3a;
+      border-radius: 50%;
+      padding: 2px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      display: none;
+    }
+    .notification-panel {
+      position: absolute;
+      right: 0;
+      top: 52px;
+      width: 320px;
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid #cbd6e9;
+      box-shadow: 0 18px 40px rgba(10,26,55,.25);
+      transform-origin: top right;
+      transform: scale(0.95);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 10;
+    }
+    .notification-panel.open {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+    .notification-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid #edf2f8;
+      font-weight: 700;
+    }
+    .notification-items {
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .notification-item {
+      padding: 10px 16px;
+      border-bottom: 1px solid #edf2f8;
+    }
+    .notification-item:last-child {
+      border-bottom: none;
+    }
+    .notification-item strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+    .notification-item span {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .notification-clear {
+      background: transparent;
+      border: none;
+      color: #1f356c;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 12px;
+    }
     .container { padding: 22px; }
     .row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
     .card {
@@ -77,10 +165,26 @@
 <body>
   <div class="header">
     <h2 id="welcomeText">Teacher Dashboard</h2>
-    <nav>
-      <a href="create_test.html">Create Test</a>
-      <a href="#" onclick="logout()">Logout</a>
-    </nav>
+    <div class="header-actions">
+      <div class="notification-area">
+        <button id="notificationBellButton" class="notification-bell" type="button" onclick="toggleNotificationPanel()" aria-label="Notifications">
+          <span class="bell-icon">🔔</span>
+          <span id="notificationCount" class="notification-count"></span>
+        </button>
+        <div id="notificationPanel" class="notification-panel">
+          <div class="notification-panel-header">
+            <span>Notifications</span>
+            <button type="button" class="notification-clear" onclick="clearNotifications()">Clear All</button>
+          </div>
+          <div id="notificationList" class="notification-items"></div>
+        </div>
+      </div>
+      <nav>
+        <a href="teacher_groups.html">My Groups</a>
+        <a href="create_test.html">Create Test</a>
+        <a href="#" onclick="logout()">Logout</a>
+      </nav>
+    </div>
   </div>
 
   <div class="container">
@@ -99,18 +203,6 @@
 
     <div class="row">
       <div class="card" style="width:100%;">
-        <h3>Add Student To Group</h3>
-        <p class="muted">Send request by roll number. Student must accept.</p>
-        <div class="grid">
-          <input id="groupName" placeholder="Group Name (e.g., CSE-A)" />
-          <input id="studentRollNoInput" placeholder="Student Roll No" />
-          <button onclick="sendGroupRequest()">Send Request</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="card" style="width:100%;">
         <h3>Pending Requests</h3>
         <div class="table-wrap">
           <table id="pendingRequestsTable">
@@ -123,8 +215,8 @@
 
     <div class="row">
       <div class="card" style="width:100%;">
-        <h3>My Student Groups</h3>
-        <div id="teacherGroupsContainer"></div>
+        <h3>Manage My Groups</h3>
+        <p class="muted">Group management now lives on a focused page. Use the “My Groups” link in the header to open it.</p>
       </div>
     </div>
 
@@ -154,17 +246,11 @@
     <div class="row">
       <div class="card" style="width:100%;">
         <h3>Notifications</h3>
+        <p class="muted">Send a quick message to an accepted student; view replies through the bell above.</p>
         <div class="grid">
           <select id="notifyStudentSelect"></select>
           <textarea id="teacherNotificationMsg" placeholder="Type notification for selected student"></textarea>
           <button onclick="sendNotificationToStudent()">Send Notification</button>
-        </div>
-        <h4>Inbox</h4>
-        <div class="table-wrap">
-          <table id="teacherInboxTable">
-            <thead><tr><th>From</th><th>Message</th><th>Time</th></tr></thead>
-            <tbody></tbody>
-          </table>
         </div>
       </div>
     </div>
@@ -236,8 +322,8 @@
     renderGroups(accepted);
     renderSelectors(accepted);
     renderResults(acceptedUsernames);
-    renderTeacherInbox();
     renderFeedbackSentTable();
+    renderNotificationPanel();
   }
 
   function renderGroups(accepted) {
@@ -291,74 +377,6 @@
       : '<tr><td colspan="4">No results from accepted students.</td></tr>';
   }
 
-  async function sendGroupRequest() {
-    const groupName = document.getElementById("groupName").value.trim() || "General";
-    const studentRollNo = document.getElementById("studentRollNoInput").value.trim();
-    if (!studentRollNo) {
-      alert("Enter student roll number or username.");
-      return;
-    }
-
-    if (!students || students.length === 0) {
-      try {
-        const studentsRes = await Api.getStudents({ rollNo: studentRollNo, username: studentRollNo });
-        students = studentsRes.students || [];
-      } catch (err) {
-        alert(err.message || "Failed to load students list.");
-        return;
-      }
-    }
-
-    const inputRaw = studentRollNo.toLowerCase();
-    const normalize = (v) => (v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-    const inputNorm = normalize(inputRaw);
-    const student = students.find(s => {
-      const roll = (s.studentProfile?.rollNo || "").trim();
-      const uname = (s.username || "").trim();
-      const rollNorm = normalize(roll);
-      const unameNorm = normalize(uname);
-      return rollNorm === inputNorm || unameNorm === inputNorm ||
-        (rollNorm && inputNorm.includes(rollNorm)) || (unameNorm && inputNorm.includes(unameNorm));
-    });
-    if (!student) {
-      const known = students.map(s => (s.studentProfile?.rollNo || s.username || "")).filter(Boolean).join(", ");
-      alert("Student not found. Known roll numbers or usernames: " + (known || "none"));
-      return;
-    }
-
-    const reqs = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
-    const dup = reqs.find(r =>
-      r.teacherUsername === user.username &&
-      r.studentUsername === student.username &&
-      (r.groupName || "General").toLowerCase() === groupName.toLowerCase() &&
-      ["pending", "accepted"].includes(r.status)
-    );
-    if (dup) {
-      alert("Pending or accepted request already exists for this student in this group.");
-      return;
-    }
-
-    reqs.push({
-      id: Date.now(),
-      teacherId: user.id,
-      teacherUsername: user.username,
-      teacherName: user.teacherProfile?.name || user.username,
-      teacherDepartment: user.teacherProfile?.department || "",
-      studentId: student.id,
-      studentUsername: student.username,
-      studentName: student.studentProfile?.name || student.username,
-      studentRollNo: student.studentProfile?.rollNo || "",
-      groupName,
-      status: "pending",
-      requestedAt: new Date().toLocaleString()
-    });
-
-    localStorage.setItem("studentGroupRequests", JSON.stringify(reqs));
-    document.getElementById("studentRollNoInput").value = "";
-    alert("Request sent.");
-    refreshDashboard();
-  }
-
   function removeStudentFromGroup(studentUsername, groupName) {
     const reqs = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
     reqs.forEach(r => {
@@ -390,7 +408,7 @@
     if (!message) { alert("Notification message is required."); return; }
 
     const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
-    notes.push({ id: Date.now(), fromUsername: user.username, fromRole: "teacher", toUsername, toRole: "student", message, createdAt: new Date().toLocaleString() });
+    notes.push({ id: Date.now(), fromUsername: user.username, fromRole: "teacher", toUsername, toRole: "student", message, createdAt: new Date().toLocaleString(), read: false });
     localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
     document.getElementById("teacherNotificationMsg").value = "";
     alert("Notification sent.");
@@ -417,14 +435,84 @@
       : '<tr><td colspan="3">No feedback sent yet.</td></tr>';
   }
 
-  function renderTeacherInbox() {
+  function getMyNotifications() {
     const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
-    const mine = notes.filter(n => n.toUsername === user.username).sort((a, b) => b.id - a.id);
-    const body = document.querySelector("#teacherInboxTable tbody");
-    body.innerHTML = mine.length
-      ? mine.map(n => `<tr><td>${n.fromUsername} (${n.fromRole})</td><td>${n.message}</td><td>${n.createdAt}</td></tr>`).join("")
-      : '<tr><td colspan="3">No notifications.</td></tr>';
+    return notes
+      .filter(n => n.toUsername === user.username && !n.read)
+      .sort((a, b) => b.id - a.id);
   }
+
+  function renderNotificationPanel() {
+    const panel = document.getElementById("notificationPanel");
+    const listEl = document.getElementById("notificationList");
+    const countEl = document.getElementById("notificationCount");
+    if (!panel || !listEl || !countEl) return;
+    const notifications = getMyNotifications();
+    if (!notifications.length) {
+      listEl.innerHTML = '<p class="muted" style="padding:12px 16px;">No notifications yet.</p>';
+      countEl.style.display = "none";
+    } else {
+      countEl.innerText = notifications.length;
+      countEl.style.display = "inline";
+      listEl.innerHTML = notifications.map(n => `
+        <div class="notification-item">
+          <div class="notification-header">
+            <strong>${n.fromUsername} (${n.fromRole})</strong>
+            <div class="notification-actions">
+              <button type="button" class="ghost-action small-action" onclick="markNotificationAsRead(${n.id})" aria-label="Mark notification read">✔</button>
+            </div>
+          </div>
+          <div>${n.message}</div>
+          <span>${n.createdAt || ""}</span>
+        </div>
+      `).join("");
+    }
+  }
+
+  function toggleNotificationPanel() {
+    const panel = document.getElementById("notificationPanel");
+    if (!panel) return;
+    panel.classList.toggle("open");
+    renderNotificationPanel();
+  }
+
+  function markNotificationAsRead(id) {
+    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+    let changed = false;
+    for (const note of notes) {
+      if (note.id === id && !note.read) {
+        note.read = true;
+        changed = true;
+        break;
+      }
+    }
+    if (changed) {
+      localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
+    }
+    renderNotificationPanel();
+  }
+
+  function clearNotifications() {
+    const remaining = (JSON.parse(localStorage.getItem("dashboardNotifications")) || [])
+      .filter(n => n.toUsername !== user.username);
+    localStorage.setItem("dashboardNotifications", JSON.stringify(remaining));
+    renderNotificationPanel();
+  }
+
+  document.addEventListener("click", event => {
+    const panel = document.getElementById("notificationPanel");
+    const bell = document.getElementById("notificationBellButton");
+    if (!panel || !bell) return;
+    if (!panel.contains(event.target) && !bell.contains(event.target)) {
+      panel.classList.remove("open");
+    }
+  });
+
+  window.addEventListener("storage", event => {
+    if (event.key === "dashboardNotifications") {
+      renderNotificationPanel();
+    }
+  });
 
   function openStudentDetails(studentUsername) {
     const acceptedUsernames = [...new Set(getAcceptedRequests().map(r => r.studentUsername))];

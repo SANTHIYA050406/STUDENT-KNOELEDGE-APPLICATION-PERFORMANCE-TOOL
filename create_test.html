@@ -509,7 +509,9 @@
 
     function getMyNotifications() {
       const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
-      return notes.filter(n => n.toUsername === (AppStore.getState().user?.username || "")).sort((a,b)=>b.id-a.id);
+      return notes
+        .filter(n => n.toUsername === (AppStore.getState().user?.username || "") && !n.read)
+        .sort((a,b)=>b.id-a.id);
     }
 
     function renderNotificationPanel() {
@@ -526,7 +528,12 @@
         countEl.style.display = "inline";
         listEl.innerHTML = notifications.map(n => `
           <div class="notification-item">
-            <strong>${n.fromUsername || 'System'}</strong>
+            <div class="notification-header">
+              <strong>${n.fromUsername || 'System'}</strong>
+              <div class="notification-actions">
+                <button type="button" class="ghost-action small-action" onclick="markNotificationAsRead(${n.id})" aria-label="Mark notification read">✔</button>
+              </div>
+            </div>
             <div>${n.message}</div>
             <span>${n.createdAt || ""}</span>
           </div>
@@ -538,6 +545,22 @@
       const panel = document.getElementById("notificationPanel");
       if (!panel) return;
       panel.classList.toggle("open");
+      renderNotificationPanel();
+    }
+
+    function markNotificationAsRead(id) {
+      const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+      let changed = false;
+      for (const note of notes) {
+        if (note.id === id && !note.read) {
+          note.read = true;
+          changed = true;
+          break;
+        }
+      }
+      if (changed) {
+        localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
+      }
       renderNotificationPanel();
     }
 
@@ -554,6 +577,12 @@
       if (!panel || !bell) return;
       if (!panel.contains(event.target) && !bell.contains(event.target)) {
         panel.classList.remove("open");
+      }
+    });
+
+    window.addEventListener("storage", event => {
+      if (event.key === "dashboardNotifications") {
+        renderNotificationPanel();
       }
     });
 

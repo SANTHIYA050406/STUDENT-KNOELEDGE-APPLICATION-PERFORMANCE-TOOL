@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teacher Groups</title>
+  <style>
+    :root {
+      --bg: #eef3ff;
+      --bg2: #fef7ea;
+      --panel: #ffffff;
+      --stroke: #d8e3f2;
+      --text: #14223c;
+      --muted: #607086;
+      --brand: #0f766e;
+      --brand2: #115e59;
+      --danger: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 10%, #fff6d9 0, #fff6d9 15%, transparent 16%),
+        radial-gradient(circle at 80% 5%, #d6f6ef 0, #d6f6ef 14%, transparent 16%),
+        linear-gradient(160deg, var(--bg), var(--bg2));
+      min-height: 100vh;
+    }
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: 240px;
+      padding: 28px 20px;
+      background: linear-gradient(180deg, #1f356c, #115e59);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+    }
+    .sidebar h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      letter-spacing: 0.05em;
+    }
+    .sidebar-link, .sidebar-button {
+      border-radius: 10px;
+      border: 1px solid transparent;
+      padding: 10px 14px;
+      font-weight: 700;
+      text-decoration: none;
+      color: #f8fbff;
+      background: transparent;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      text-align: left;
+    }
+    .sidebar-link:hover, .sidebar-button:hover {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.35);
+    }
+    .sidebar-link.active {
+      background: rgba(255,255,255,0.18);
+      border-color: rgba(255,255,255,0.45);
+    }
+    .sidebar-button {
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.28);
+      text-align: center;
+      margin-top: auto;
+    }
+    .main {
+      flex: 1;
+      padding: 30px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .main-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    .main-header h1 {
+      margin: 4px 0 0;
+      font-size: 28px;
+    }
+    .label {
+      margin: 0;
+      font-size: 13px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .header-nav {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .notification-area {
+      position: relative;
+    }
+    .notification-bell {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.45);
+      background: rgba(0, 0, 0, 0.08);
+      color: var(--text);
+      font-size: 18px;
+      cursor: pointer;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .notification-count {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: #facc15;
+      color: #1f2a3a;
+      border-radius: 50%;
+      padding: 2px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      display: none;
+    }
+    .notification-panel {
+      position: absolute;
+      right: 0;
+      top: 52px;
+      width: 320px;
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid #cbd6e9;
+      box-shadow: 0 18px 40px rgba(10,26,55,.25);
+      transform-origin: top right;
+      transform: scale(0.95);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 10;
+    }
+    .notification-panel.open {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+    .notification-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid #edf2f8;
+      font-weight: 700;
+    }
+    .notification-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .notification-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .notification-items {
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .notification-item {
+      padding: 10px 16px;
+      border-bottom: 1px solid #edf2f8;
+    }
+    .notification-item:last-child {
+      border-bottom: none;
+    }
+    .notification-item strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+    .notification-item span {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .notification-clear {
+      background: transparent;
+      border: none;
+      color: var(--brand2);
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .small-action {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+    .header-actions .ghost-link {
+      color: var(--brand2);
+      font-weight: 700;
+      text-decoration: none;
+      align-self: center;
+    }
+    button, .primary {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-weight: 700;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--brand), var(--brand2));
+      color: #fff;
+    }
+    .header-nav button.ghost-link {
+      background: transparent;
+      border: none;
+      padding: 0;
+      font-weight: 700;
+      color: var(--brand2);
+    }
+    .header-nav button.ghost-link:hover,
+    .header-nav button.ghost-link:focus-visible {
+      text-decoration: underline;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 14px 35px rgba(15, 25, 47, 0.15);
+    }
+    .panel h3 {
+      margin: 0 0 6px;
+      font-weight: 600;
+      color: #0f2a54;
+    }
+    .panel .muted {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .selected-members-list {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .selected-member-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #cbd5f5;
+      background: #eef2ff;
+      font-size: 13px;
+      color: #0f172a;
+    }
+    .selected-member-chip button {
+      border: none;
+      background: transparent;
+      color: #0f172a;
+      font-weight: 700;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+    }
+    .selected-members-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #cbd6e9;
+      font-family: inherit;
+      font-size: 14px;
+      background: #fdfdfd;
+    }
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+    select {
+      min-height: 120px;
+    }
+    .members-checklist {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 8px;
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid #d4dce8;
+      background: #fff;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .member-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.2s ease;
+      font-size: 13px;
+    }
+    .member-option input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #2563eb;
+      cursor: pointer;
+    }
+    .member-option:hover {
+      border-color: rgba(37, 99, 235, 0.4);
+      background: #f8f9ff;
+    }
+    .panel button {
+      margin-top: 8px;
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .groups-list {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .group-card {
+      border: 1px solid #d8e0ec;
+      border-radius: 16px;
+      padding: 18px;
+      background: #fbfdff;
+    }
+    .group-card-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .group-card-header h4 {
+      margin: 0;
+      font-size: 18px;
+    }
+    .detail-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #dfe7f4;
+      background: #fff;
+      min-height: 120px;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: #0f2a54;
+    }
+    .member-row {
+      border: 1px solid #e2e8f5;
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 10px;
+    }
+    .member-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-end;
+    }
+    .ghost-action {
+      background: #f3f4f6;
+      border: 1px solid #cbd6e9;
+      color: #0f2a54;
+      font-weight: 600;
+      border-radius: 10px;
+    }
+    .member-details {
+      flex: 1;
+    }
+    .member-details p {
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .danger {
+      background: linear-gradient(135deg, #e11d48, var(--danger));
+    }
+    .table-wrap {
+      max-height: 280px;
+      overflow-y: auto;
+      border: 1px solid #dce6f3;
+      border-radius: 12px;
+      margin-top: 12px;
+      background: #fbfdff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #edf2f8;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: linear-gradient(120deg, #365ea7, #2f4f93);
+      color: #fff;
+      font-size: 12px;
+    }
+    @media (max-width: 960px) {
+      .layout {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        position: relative;
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+      .sidebar h2 {
+        width: 100%;
+      }
+      .sidebar-link {
+        flex: 1 1 45%;
+      }
+      .main {
+        padding: 24px 18px;
+      }
+      .main-header {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Teacher Menu</h2>
+      <a class="sidebar-link active" href="teacher_groups.html">My Groups</a>
+      <a class="sidebar-link" href="admin_dashboard.html">Dashboard</a>
+      <a class="sidebar-link" href="create_test.html">Create Test</a>
+    </aside>
+    <div class="main">
+      <div class="main-header">
+        <div>
+          <p class="label">My Groups</p>
+          <h1 id="welcomeText">Teacher</h1>
+          <p class="muted">Create and inspect student groups in one focused space.</p>
+        </div>
+        <div class="header-actions">
+          <div class="notification-area">
+            <button id="notificationBellButton" class="notification-bell" type="button" onclick="toggleNotificationPanel()" aria-label="Notifications">
+              <span class="bell-icon">🔔</span>
+              <span id="notificationCount" class="notification-count"></span>
+            </button>
+            <div id="notificationPanel" class="notification-panel">
+              <div class="notification-panel-header">
+                <span>Notifications</span>
+                <button type="button" class="notification-clear" onclick="clearNotifications()">Clear All</button>
+              </div>
+              <div id="notificationList" class="notification-items"></div>
+            </div>
+          </div>
+          <nav class="header-nav" aria-label="Teacher page shortcuts">
+            <a class="ghost-link" href="admin_dashboard.html">Dashboard</a>
+            <button class="ghost-link" type="button" onclick="logout()">Logout</button>
+          </nav>
+        </div>
+      </div>
+
+      <section class="panel">
+        <h3>Create a new Group</h3>
+        <p class="muted">Name the group, describe it, and add the students that have accepted your connect requests.</p>
+        <div class="grid">
+          <input id="groupNameInput" placeholder="Group name e.g. CSE - Batch A" />
+          <textarea id="groupDescription" placeholder="Brief description (optional)"></textarea>
+          <div id="groupMembersChecklist" class="members-checklist" aria-label="Accepted students checklist"></div>
+        </div>
+        <div id="selectedMembersList" class="selected-members-list">
+          <p class="selected-members-note">Pick students from the list above to add them to this group.</p>
+        </div>
+        <button onclick="createGroup()">Create Group</button>
+      </section>
+
+      <section class="panel">
+        <h3>Request Student to Join</h3>
+        <p class="muted">Use roll number or username to invite students into the named group.</p>
+        <div class="grid">
+          <input id="groupRequestName" placeholder="Group Name (e.g., CSE-A)" />
+          <input id="groupRequestRoll" placeholder="Student Roll No or Username" />
+          <button onclick="sendGroupRequest()">Send Request</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h3>My Groups</h3>
+          <span id="groupCount" class="muted"></span>
+        </div>
+        <div id="groupsList" class="groups-list"></div>
+      </section>
+
+      <section class="panel" id="studentDetailPanel">
+        <h3>Student Details</h3>
+        <p class="muted" id="studentDetailNote">Click “Details” beside a member to inspect that student.</p>
+        <div id="studentDetailBody" class="detail-body">
+          <p class="muted">Select a member to see their profile summary.</p>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="js/store.js"></script>
+<script src="js/api.js"></script>
+<script>
+  const GROUP_STORAGE_KEY = "teacherGroupsData";
+  let user = AppStore.getState().user || JSON.parse(localStorage.getItem("currentUser") || "null");
+  let students = [];
+  let allGroups = [];
+  let myGroups = [];
+  const pendingGroupMembers = new Set();
+
+  if (!user || (user.role !== "teacher" && user.role !== "admin")) {
+    window.location.href = "index.html";
+  }
+
+  function studentByUsername(username) {
+    return students.find(s => s.username === username) || null;
+  }
+
+  function getTeacherRequests() {
+    const all = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
+    return all.filter(r => String(r.teacherId) === String(user.id) || r.teacherUsername === user.username);
+  }
+
+  function getAcceptedRequests() {
+    return getTeacherRequests().filter(r => r.status === "accepted");
+  }
+
+  function renderHeaderDetails() {
+    document.getElementById("welcomeText").innerText = `Welcome, ${user.teacherProfile?.name || user.username} (My Groups)`;
+  }
+
+  function loadGroupsFromStore() {
+    allGroups = JSON.parse(localStorage.getItem(GROUP_STORAGE_KEY) || "[]");
+    myGroups = allGroups.filter(g => String(g.teacherId) === String(user.id));
+  }
+
+  function persistGroups() {
+    const others = allGroups.filter(g => String(g.teacherId) !== String(user.id));
+    allGroups = [...others, ...myGroups];
+    localStorage.setItem(GROUP_STORAGE_KEY, JSON.stringify(allGroups));
+  }
+
+  function normalizeMembers(values) {
+    const set = new Set();
+    values.forEach(v => {
+      const normalized = (v || "").trim();
+      if (normalized) set.add(normalized);
+    });
+    return Array.from(set);
+  }
+
+  function escapeJsString(value) {
+    return (value || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  }
+
+  function escapeHtml(value) {
+    return (value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function renderMembersChecklist() {
+    const container = document.getElementById("groupMembersChecklist");
+    if (!container) return;
+    const accepted = getAcceptedRequests();
+    const unique = [];
+    const seen = new Set();
+    accepted.forEach(req => {
+      if (!req.studentUsername || seen.has(req.studentUsername)) return;
+      seen.add(req.studentUsername);
+      unique.push(req);
+    });
+
+    if (!unique.length) {
+      pendingGroupMembers.clear();
+      renderSelectedMembersChips();
+      container.innerHTML = '<p class="muted">No accepted students yet.</p>';
+      return;
+    }
+
+    const acceptedUsernames = new Set(unique.map(req => req.studentUsername));
+    for (const username of Array.from(pendingGroupMembers)) {
+      if (!acceptedUsernames.has(username)) pendingGroupMembers.delete(username);
+    }
+
+    container.innerHTML = unique.map(req => {
+      const username = req.studentUsername;
+      const student = studentByUsername(username);
+      const displayName = student?.studentProfile?.name || req.studentName || username;
+      const rollLabel = student?.studentProfile?.rollNo || req.studentRollNo || username;
+      const isChecked = pendingGroupMembers.has(username) ? "checked" : "";
+      const label = `${displayName} • ${rollLabel}${req.groupName ? ` • ${req.groupName}` : ""}`;
+      const safeLabel = escapeHtml(label);
+      const safeUsername = escapeJsString(username);
+      return `
+        <label class="member-option">
+          <input type="checkbox" value="${safeUsername}" ${isChecked} onchange="onPendingMemberToggle(this)" />
+          <span>
+            <strong>${escapeHtml(displayName)}</strong><br />
+            <small class="muted">Roll / username: ${escapeHtml(rollLabel)}${req.groupName ? " • Group: " + escapeHtml(req.groupName) : ""}</small>
+          </span>
+        </label>
+      `;
+    }).join("");
+
+    renderSelectedMembersChips();
+  }
+
+  function onPendingMemberToggle(checkbox) {
+    if (!checkbox) return;
+    const username = checkbox.value;
+    if (!username) return;
+    if (checkbox.checked) {
+      pendingGroupMembers.add(username);
+    } else {
+      pendingGroupMembers.delete(username);
+    }
+    renderSelectedMembersChips();
+  }
+
+  function renderSelectedMembersChips() {
+    const container = document.getElementById("selectedMembersList");
+    if (!container) return;
+    const members = Array.from(pendingGroupMembers)
+      .map(member => (member || "").trim())
+      .filter(Boolean);
+    if (!members.length) {
+      container.innerHTML = '<p class="selected-members-note">Pick students from the list above to add them to this group.</p>';
+      return;
+    }
+    container.innerHTML = members.map(username => {
+      const student = studentByUsername(username);
+      const displayName = student?.studentProfile?.name || username;
+      const rollLabel = student?.studentProfile?.rollNo || "";
+      const safeLabel = escapeHtml(`${displayName}${rollLabel ? ` (${rollLabel})` : ""}`);
+      const safeUsername = escapeJsString(username);
+      return `<span class="selected-member-chip">${safeLabel}<button type="button" onclick="removePendingMember('${safeUsername}')" aria-label="Remove ${escapeHtml(displayName)}">×</button></span>`;
+    }).join("");
+  }
+
+  function removePendingMember(username) {
+    if (!username) return;
+    pendingGroupMembers.delete(username);
+    renderMembersChecklist();
+    renderSelectedMembersChips();
+  }
+
+  function createGroup() {
+    const name = document.getElementById("groupNameInput").value.trim();
+    const description = document.getElementById("groupDescription").value.trim();
+    const members = normalizeMembers(Array.from(pendingGroupMembers));
+    if (!name) {
+      alert("Group name is required.");
+      return;
+    }
+    const normalizedName = name.toLowerCase();
+    if (myGroups.some(g => (g.groupName || "").toLowerCase() === normalizedName)) {
+      alert("You already have a group with that name.");
+      return;
+    }
+    if (!members.length) {
+      alert("Select at least one accepted student to add to this group.");
+      return;
+    }
+
+    const newGroup = {
+      id: Date.now(),
+      teacherId: user.id,
+      teacherUsername: user.username,
+      groupName: name,
+      description,
+      members,
+      createdAt: new Date().toLocaleString()
+    };
+    myGroups.unshift(newGroup);
+    persistGroups();
+    renderGroupsList();
+    document.getElementById("groupNameInput").value = "";
+    document.getElementById("groupDescription").value = "";
+    pendingGroupMembers.clear();
+    renderMembersChecklist();
+    renderSelectedMembersChips();
+  }
+
+  async function sendGroupRequest() {
+    const groupName = document.getElementById("groupRequestName").value.trim() || "General";
+    const studentRollNo = document.getElementById("groupRequestRoll").value.trim();
+    if (!studentRollNo) {
+      alert("Enter student roll number or username.");
+      return;
+    }
+
+    const normalize = (value) => (value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const inputNorm = normalize(studentRollNo);
+    let student = students.find(s => {
+      const roll = (s.studentProfile?.rollNo || "").trim();
+      const uname = (s.username || "").trim();
+      const rollNorm = normalize(roll);
+      const unameNorm = normalize(uname);
+      return rollNorm === inputNorm || unameNorm === inputNorm ||
+        (rollNorm && inputNorm.includes(rollNorm)) || (unameNorm && inputNorm.includes(unameNorm));
+    });
+
+    if (!student) {
+      if (!students.length) {
+        try {
+          const studentsRes = await Api.getStudents({ rollNo: studentRollNo, username: studentRollNo });
+          students = studentsRes.students || [];
+        } catch (err) {
+          alert(err.message || "Unable to load students.");
+          return;
+        }
+        student = students.find(s => {
+          const roll = (s.studentProfile?.rollNo || "").trim();
+          const uname = (s.username || "").trim();
+          const rollNorm = normalize(roll);
+          const unameNorm = normalize(uname);
+          return rollNorm === inputNorm || unameNorm === inputNorm ||
+            (rollNorm && inputNorm.includes(rollNorm)) || (unameNorm && inputNorm.includes(unameNorm));
+        });
+      }
+    }
+    if (!student) {
+      alert("Student not found. Try another roll number or username.");
+      return;
+    }
+
+    const reqs = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
+    const duplicate = reqs.find(r =>
+      r.teacherUsername === user.username &&
+      r.studentUsername === student.username &&
+      (r.groupName || "General").toLowerCase() === groupName.toLowerCase() &&
+      ["pending", "accepted"].includes(r.status)
+    );
+    if (duplicate) {
+      alert("A pending or accepted request already exists for this student in that group.");
+      return;
+    }
+
+    reqs.push({
+      id: Date.now(),
+      teacherId: user.id,
+      teacherUsername: user.username,
+      teacherName: user.teacherProfile?.name || user.username,
+      teacherDepartment: user.teacherProfile?.department || "",
+      studentId: student.id,
+      studentUsername: student.username,
+      studentName: student.studentProfile?.name || student.username,
+      studentRollNo: student.studentProfile?.rollNo || "",
+      groupName,
+      status: "pending",
+      requestedAt: new Date().toLocaleString()
+    });
+
+    localStorage.setItem("studentGroupRequests", JSON.stringify(reqs));
+    document.getElementById("groupRequestName").value = "";
+    document.getElementById("groupRequestRoll").value = "";
+    renderAcceptedSnapshot();
+    alert("Request sent.");
+  }
+
+  function renderGroupsList() {
+    const container = document.getElementById("groupsList");
+    if (!myGroups.length) {
+      container.innerHTML = '<p class="muted">No groups created yet.</p>';
+      document.getElementById("groupCount").innerText = "0 groups";
+      return;
+    }
+    document.getElementById("groupCount").innerText = `${myGroups.length} ${myGroups.length === 1 ? "group" : "groups"}`;
+
+    container.innerHTML = myGroups.map(group => {
+      const uniqueMembers = Array.from(new Set(group.members));
+      const membersHtml = uniqueMembers.length
+        ? uniqueMembers.map(member => {
+            const student = studentByUsername(member);
+            const displayName = student?.studentProfile?.name || member;
+            const roll = student?.studentProfile?.rollNo || member;
+            const safeMember = escapeJsString(member);
+            return `
+              <div class="member-row">
+                <div class="member-details">
+                  <strong>${displayName}</strong>
+                  <p>Roll / username: ${roll} | Department: ${student?.studentProfile?.department || "-"}</p>
+                </div>
+                <div class="member-actions">
+                  <button class="danger small-action" onclick="removeMemberFromGroup(${group.id}, '${safeMember}')">Remove</button>
+                  <button class="ghost-action small-action" onclick="showStudentDetails('${safeMember}');return false;">Preview</button>
+                  <button class="ghost-action small-action" onclick="openStudentDetailPage('${safeMember}');return false;">Details</button>
+                </div>
+              </div>
+            `;
+          }).join("")
+        : '<p class="muted">No members added.</p>';
+
+      return `
+        <div class="group-card">
+          <div class="group-card-header">
+            <h4>${group.groupName}</h4>
+            <button class="danger small-action" onclick="removeGroup(${group.id})">Remove Group</button>
+          </div>
+          <p class="muted">${group.description || "No description provided."}</p>
+          <p class="muted">Created at ${group.createdAt}</p>
+          ${membersHtml}
+        </div>
+      `;
+    }).join("");
+  }
+
+  function removeGroup(groupId) {
+    myGroups = myGroups.filter(g => g.id !== Number(groupId));
+    persistGroups();
+    renderGroupsList();
+  }
+
+  function removeMemberFromGroup(groupId, member) {
+    const idx = myGroups.findIndex(g => g.id === Number(groupId));
+    if (idx === -1) return;
+    myGroups[idx].members = myGroups[idx].members.filter(m => m !== member);
+    persistGroups();
+    renderGroupsList();
+  }
+
+  async function showStudentDetails(username) {
+    const detailBody = document.getElementById("studentDetailBody");
+    const detailNote = document.getElementById("studentDetailNote");
+    if (!detailBody || !detailNote) return;
+    let student = studentByUsername(username);
+    if (!student) {
+      detailNote.innerText = "Fetching student data...";
+      detailBody.innerHTML = '<p class="muted">Loading profile...</p>';
+      try {
+        const res = await Api.getStudents({ username });
+        student = (res.students || [])[0];
+        if (student) {
+          students.push(student);
+        }
+      } catch (err) {
+        detailNote.innerText = err.message || "Failed to load student.";
+        detailBody.innerHTML = '<p class="muted">Unable to fetch student data.</p>';
+        return;
+      }
+    }
+    const profile = student.studentProfile || {};
+    const entries = [
+      { label: "Name", value: profile.name || student.username },
+      { label: "Roll No", value: profile.rollNo || "—" },
+      { label: "Department", value: profile.department || "—" },
+      { label: "CGPA", value: profile.cgpa ?? "—" },
+      { label: "Email", value: student.email || "—" },
+    ];
+    const detailsHtml = entries.map(e => `<div class="detail-row"><span>${e.label}</span><span>${e.value}</span></div>`).join("");
+    const actionHtml = `<div class="detail-row"><span></span><span><button class="ghost-action small-action" onclick="openStudentDetailPage(${JSON.stringify(username)})">Full Profile</button></span></div>`;
+    detailBody.innerHTML = detailsHtml + actionHtml;
+    detailNote.innerText = `Viewing details for ${profile.name || username}.`;
+  }
+
+  function openStudentDetailPage(username) {
+    if (!username) return;
+    localStorage.setItem("selectedStudentForTeacherView", username);
+    window.location.href = "student_detail.html";
+  }
+
+  function renderAcceptedSnapshot() {
+    renderMembersChecklist();
+  }
+
+  async function loadApiData() {
+    try {
+      const meRes = await Api.me();
+      if (meRes?.user) {
+        user = meRes.user;
+        AppStore.setAuth(user, localStorage.getItem("token"));
+      }
+      const studentsRes = await Api.getStudents();
+      students = studentsRes.students || [];
+    } catch (err) {
+      if ((err.message || "").toLowerCase().includes("token") || (err.message || "").toLowerCase().includes("authorization")) {
+        AppStore.clearAuth();
+        window.location.href = "index.html";
+        return;
+      }
+      console.error("Failed to load teacher groups data", err);
+      alert(err.message || "Failed to load teacher groups data");
+    }
+  }
+
+  function logout() {
+    AppStore.clearAuth();
+    window.location.href = "index.html";
+  }
+
+  function getMyNotifications() {
+    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+    return notes
+      .filter(n => n.toUsername === user.username && !n.read)
+      .sort((a,b)=>b.id-a.id);
+  }
+
+  function renderNotificationPanel() {
+    const panel = document.getElementById("notificationPanel");
+    const listEl = document.getElementById("notificationList");
+    const countEl = document.getElementById("notificationCount");
+    if (!panel || !listEl || !countEl) return;
+    const notifications = getMyNotifications();
+    if (!notifications.length) {
+      listEl.innerHTML = '<p class="muted" style="padding:12px 16px;">No notifications yet.</p>';
+      countEl.style.display = "none";
+    } else {
+      countEl.innerText = notifications.length;
+      countEl.style.display = "inline";
+      listEl.innerHTML = notifications.map(n => `
+        <div class="notification-item">
+          <div class="notification-header">
+            <strong>${n.fromUsername} (${n.fromRole})</strong>
+            <div class="notification-actions">
+              <button type="button" class="ghost-action small-action" onclick="markNotificationAsRead(${n.id})" aria-label="Mark notification read">✔</button>
+            </div>
+          </div>
+          <div>${n.message}</div>
+          <span>${n.createdAt || ""}</span>
+        </div>
+      `).join("");
+    }
+  }
+
+  function markNotificationAsRead(id) {
+    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+    let changed = false;
+    for (const note of notes) {
+      if (note.id === id && !note.read) {
+        note.read = true;
+        changed = true;
+        break;
+      }
+    }
+    if (changed) {
+      localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
+    }
+    renderNotificationPanel();
+  }
+
+  function toggleNotificationPanel() {
+    const panel = document.getElementById("notificationPanel");
+    if (!panel) return;
+    panel.classList.toggle("open");
+    renderNotificationPanel();
+  }
+
+  function clearNotifications() {
+    const remaining = (JSON.parse(localStorage.getItem("dashboardNotifications")) || [])
+      .filter(n => n.toUsername !== user.username);
+    localStorage.setItem("dashboardNotifications", JSON.stringify(remaining));
+    renderNotificationPanel();
+  }
+
+  document.addEventListener("click", event => {
+    const panel = document.getElementById("notificationPanel");
+    const bell = document.getElementById("notificationBellButton");
+    if (!panel || !bell) return;
+    if (!panel.contains(event.target) && !bell.contains(event.target)) {
+      panel.classList.remove("open");
+    }
+  });
+
+  window.addEventListener("storage", event => {
+    if (event.key === "dashboardNotifications") {
+      renderNotificationPanel();
+    }
+  });
+
+  (async function init() {
+    renderHeaderDetails();
+    await loadApiData();
+    renderHeaderDetails();
+    loadGroupsFromStore();
+    renderGroupsList();
+    renderAcceptedSnapshot();
+    renderNotificationPanel();
+  })();
+</script>
+</body>
+</html>
