@@ -162,7 +162,24 @@
       <p>Fill basic details to continue.</p>
       <input type="text" id="studentName" placeholder="Name" />
       <input type="text" id="studentRollNo" placeholder="Roll No" />
-      <input type="text" id="studentDepartment" placeholder="Department" />
+    <select id="studentDepartment">
+      <option value="">Select Department</option>
+      <option value="AIML">AIML - Artificial Intelligence and Machine Learning</option>
+      <option value="AIDS">AIDS - Artificial Intelligence and Data Science</option>
+      <option value="CSBS">CSBS - Computer Science and Business Systems</option>
+      <option value="CSE">CSE - Computer Science and Engineering</option>
+      <option value="CT">CT - Computer Technology</option>
+      <option value="CD">CD - Cyber Defense</option>
+      <option value="IT">IT - Information Technology</option>
+      <option value="ISE">ISE - Information Science and Engineering</option>
+      <option value="ECE">ECE - Electronics and Communication Engineering</option>
+      <option value="EEE">EEE - Electrical and Electronics Engineering</option>
+      <option value="EIE">EIE - Electronics and Instrumentation Engineering</option>
+      <option value="BME">BME - Biomedical Engineering</option>
+      <option value="BT">BT - Biotechnology</option>
+    </select>
+      <input type="number" id="studentYearOfStudy" placeholder="Year of Study (1-4)" min="1" max="4" step="1" />
+      <p class="hint">Use the current study year (1 through 4 only).</p>
       <input type="number" id="studentCgpa" placeholder="Academics CGPA (0-10)" min="0" max="10" step="0.01" />
       <button id="saveStudentBtn">Save Student Details</button>
     </div>
@@ -172,7 +189,22 @@
       <p>Fill basic details to continue.</p>
       <input type="text" id="teacherName" placeholder="Name" />
       <input type="text" id="facultyId" placeholder="Faculty ID" />
-      <input type="text" id="teacherDepartment" placeholder="Department" />
+      <select id="teacherDepartment">
+        <option value="">Select Department</option>
+        <option value="AIML">AIML - Artificial Intelligence and Machine Learning</option>
+        <option value="AIDS">AIDS - Artificial Intelligence and Data Science</option>
+        <option value="CSBS">CSBS - Computer Science and Business Systems</option>
+        <option value="CSE">CSE - Computer Science and Engineering</option>
+        <option value="CT">CT - Computer Technology</option>
+        <option value="CD">CD - Cyber Defense</option>
+        <option value="IT">IT - Information Technology</option>
+        <option value="ISE">ISE - Information Science and Engineering</option>
+        <option value="ECE">ECE - Electronics and Communication Engineering</option>
+        <option value="EEE">EEE - Electrical and Electronics Engineering</option>
+        <option value="EIE">EIE - Electronics and Instrumentation Engineering</option>
+        <option value="BME">BME - Biomedical Engineering</option>
+        <option value="BT">BT - Biotechnology</option>
+      </select>
       <button id="saveTeacherBtn">Save Teacher Details</button>
     </div>
   </div>
@@ -204,6 +236,7 @@
     document.getElementById("studentName").value = user?.studentProfile?.name || user?.username || "";
     document.getElementById("studentRollNo").value = user?.studentProfile?.rollNo || "";
     document.getElementById("studentDepartment").value = user?.studentProfile?.department || "";
+    document.getElementById("studentYearOfStudy").value = user?.studentProfile?.yearOfStudy ?? "";
     document.getElementById("studentCgpa").value = user?.studentProfile?.cgpa ?? "";
   }
 
@@ -271,11 +304,20 @@
       name: document.getElementById("studentName").value.trim(),
       rollNo: document.getElementById("studentRollNo").value.trim(),
       department: document.getElementById("studentDepartment").value.trim(),
+      yearOfStudy: Number(document.getElementById("studentYearOfStudy").value),
       cgpa: Number(document.getElementById("studentCgpa").value)
     };
 
-    if (!studentProfile.name || !studentProfile.rollNo || !studentProfile.department || Number.isNaN(studentProfile.cgpa) || studentProfile.cgpa < 0 || studentProfile.cgpa > 10) {
-      alert("Enter valid student details and CGPA 0-10.");
+    if (!studentProfile.name || !studentProfile.rollNo || !studentProfile.department) {
+      alert("Enter name, roll number, and department.");
+      return;
+    }
+    if (!Number.isInteger(studentProfile.yearOfStudy) || studentProfile.yearOfStudy < 1 || studentProfile.yearOfStudy > 4) {
+      alert("Enter a valid year of study between 1 and 4.");
+      return;
+    }
+    if (Number.isNaN(studentProfile.cgpa) || studentProfile.cgpa < 0 || studentProfile.cgpa > 10) {
+      alert("Enter a CGPA between 0 and 10.");
       return;
     }
 

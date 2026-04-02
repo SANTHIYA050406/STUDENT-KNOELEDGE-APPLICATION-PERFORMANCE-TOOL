@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Students Progress</title>
+  <style>
+    :root {
+      --bg: #eef3ff;
+      --bg2: #fff7ea;
+      --panel: #fff;
+      --stroke: #d8e3f2;
+      --text: #1f2a3a;
+      --muted: #607086;
+      --brand: #0f766e;
+      --brand2: #115e59;
+      --danger: #dc2626;
+    }
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 15%, #fff2cc 0, #fff2cc 14%, transparent 16%),
+        radial-gradient(circle at 90% 10%, #d6f6ef 0, #d6f6ef 14%, transparent 16%),
+        linear-gradient(150deg, var(--bg), var(--bg2));
+    }
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 250px;
+      padding: 22px 14px;
+      color: #fff;
+      background: linear-gradient(180deg, #1f3165, #17274f);
+      border-right: 1px solid rgba(255,255,255,.08);
+      box-sizing: border-box;
+    }
+    .sidebar h2 { margin: 0 0 20px; font-size: 19px; }
+    .side-link {
+      width: 100%;
+      border: 1px solid transparent;
+      background: transparent;
+      color: #edf2ff;
+      text-align: left;
+      padding: 11px 12px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .side-link.active, .side-link:hover {
+      background: rgba(255,255,255,.12);
+      border-color: rgba(255,255,255,.2);
+    }
+    .main { flex: 1; display: flex; flex-direction: column; }
+    .header {
+      background: linear-gradient(120deg, #1f356c, #115e59);
+      color: #fff;
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 8px 20px rgba(19,37,69,.2);
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .notification-area {
+      position: relative;
+    }
+    .notification-bell {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.45);
+      background: rgba(255,255,255,.15);
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      position: relative;
+    }
+    .notification-count {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: #facc15;
+      color: #1f2a3a;
+      border-radius: 50%;
+      padding: 2px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      display: none;
+    }
+    .notification-panel {
+      position: absolute;
+      right: 0;
+      top: 52px;
+      width: 320px;
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid #cbd6e9;
+      box-shadow: 0 18px 40px rgba(10,26,55,.25);
+      transform-origin: top right;
+      transform: scale(0.95);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 10;
+    }
+    .notification-panel.open {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+    .notification-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid #edf2f8;
+      font-weight: 700;
+    }
+    .notification-items {
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .notification-item {
+      padding: 10px 16px;
+      border-bottom: 1px solid #edf2f8;
+    }
+    .notification-item:last-child {
+      border-bottom: none;
+    }
+    .notification-item strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+    .notification-item span {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .notification-clear {
+      background: transparent;
+      border: none;
+      color: #1f356c;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .header button {
+      padding: 9px 14px;
+      border: 1px solid rgba(255,255,255,.35);
+      border-radius: 8px;
+      background: rgba(255,255,255,.14);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .page {
+      flex: 1;
+      padding: 24px;
+    }
+    .row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      box-shadow: 0 10px 24px rgba(18,33,61,.08);
+      padding: 20px;
+      flex: 1;
+    }
+    .card h3 {
+      margin-top: 0;
+      color: #213754;
+    }
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .chart-wrap {
+      margin: 18px 0;
+      overflow: hidden;
+    }
+    .top-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 12px;
+    }
+    .top-card {
+      border: 1px solid #dfe4f1;
+      border-radius: 12px;
+      padding: 12px 14px;
+      background: #fbfdff;
+    }
+    .top-card h4 {
+      margin: 0;
+      font-size: 16px;
+    }
+    .top-card small {
+      color: var(--muted);
+      font-size: 12px;
+      display: block;
+      margin-top: 6px;
+    }
+    .ghost-action {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      color: #1f356c;
+      font-size: 12px;
+    }
+    @media (max-width: 860px) {
+      .layout { flex-direction: column; }
+      .sidebar { width: 100%; display: flex; gap: 8px; overflow-x: auto; padding: 12px; }
+      .sidebar h2 { display: none; }
+      .side-link { margin: 0; white-space: nowrap; }
+      .header { flex-direction: column; gap: 16px; }
+      .page { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Student Menu</h2>
+      <button class="side-link" onclick="window.location.href='dashboard.html'">Dashboard</button>
+      <button class="side-link" onclick="window.location.href='dashboard.html'">Teacher Connections</button>
+      <button class="side-link active" onclick="window.location.href='students_progress.html'">Student Progress</button>
+      <button class="side-link" onclick="window.location.href='dashboard.html'">Competition Report</button>
+      <button class="side-link" onclick="window.location.href='dashboard.html'">Academics Report</button>
+      <button class="side-link" onclick="window.location.href='dashboard.html'">Certifications</button>
+    </aside>
+    <main class="main">
+      <div class="header">
+        <h2 id="welcomeText">Students Progress</h2>
+        <div class="header-actions">
+          <div class="notification-area">
+            <button id="notificationBellButton" class="notification-bell" type="button" onclick="toggleNotificationPanel()" aria-label="Notifications">
+              <span class="bell-icon">🔔</span>
+              <span id="notificationCount" class="notification-count"></span>
+            </button>
+            <div id="notificationPanel" class="notification-panel">
+              <div class="notification-panel-header">
+                <span>Notifications</span>
+                <button type="button" class="notification-clear" onclick="clearNotifications()">Clear All</button>
+              </div>
+              <div id="notificationList" class="notification-items"></div>
+            </div>
+          </div>
+          <button type="button" onclick="logout()">Logout</button>
+        </div>
+      </div>
+      <section class="page active">
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Top achievers in your year</h3>
+            <p class="muted">We automatically highlight the highest-scoring student for your current year and compare CGPA, uploaded certificates, competition entries, and an aggregated achievement score.</p>
+            <div class="chart-wrap">
+              <canvas id="progressChart"></canvas>
+            </div>
+            <div>
+              <h3 id="topListTitle">Top students</h3>
+              <div id="topStudentsList" class="top-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    let user = AppStore.getState().user || JSON.parse(localStorage.getItem("currentUser") || "null");
+    if (!user || user.role !== "student") window.location.href = "index.html";
+
+    const notificationBellButton = document.getElementById("notificationBellButton");
+    const notificationPanel = document.getElementById("notificationPanel");
+    const notificationCount = document.getElementById("notificationCount");
+    const notificationList = document.getElementById("notificationList");
+    const welcomeText = document.getElementById("welcomeText");
+    const chartCanvas = document.getElementById("progressChart");
+    const topStudentsList = document.getElementById("topStudentsList");
+    const topListTitle = document.getElementById("topListTitle");
+
+    let progressChart = null;
+
+    const colorPalette = {
+      top: "#16a34a",
+      you: "#2563eb"
+    };
+
+    welcomeText.innerText = `Student Progress • ${(user.studentProfile?.name || user.username)}`;
+
+    function getMyNotifications() {
+      const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+      return notes.filter(n => n.toUsername === user.username && !n.read).sort((a,b)=>b.id-a.id);
+    }
+
+    function renderNotificationPanel() {
+      const notifications = getMyNotifications();
+      if (!notifications.length) {
+        notificationList.innerHTML = '<p class="muted" style="padding:12px 16px;">No notifications yet.</p>';
+        notificationCount.style.display = "none";
+        return;
+      }
+      notificationCount.innerText = notifications.length;
+      notificationCount.style.display = "inline";
+      notificationList.innerHTML = notifications.map(n => `
+        <div class="notification-item">
+          <strong>${n.fromUsername} (${n.fromRole})</strong>
+          <p style="margin:0;">${n.message}</p>
+          <span>${n.createdAt || ""}</span>
+          <button class="ghost-action" onclick="markNotificationAsRead(${n.id})">Mark read</button>
+        </div>
+      `).join("");
+    }
+
+    function toggleNotificationPanel() {
+      notificationPanel.classList.toggle("open");
+      if (notificationPanel.classList.contains("open")) {
+        renderNotificationPanel();
+      }
+    }
+
+    function markNotificationAsRead(id) {
+      const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+      const updated = notes.map(note => note.id === id ? { ...note, read: true } : note);
+      localStorage.setItem("dashboardNotifications", JSON.stringify(updated));
+      renderNotificationPanel();
+    }
+
+    function clearNotifications() {
+      const remaining = (JSON.parse(localStorage.getItem("dashboardNotifications")) || [])
+        .filter(n => n.toUsername !== user.username);
+      localStorage.setItem("dashboardNotifications", JSON.stringify(remaining));
+      renderNotificationPanel();
+    }
+
+    document.addEventListener("click", event => {
+      if (!notificationPanel.contains(event.target) && !notificationBellButton.contains(event.target)) {
+        notificationPanel.classList.remove("open");
+      }
+    });
+    window.addEventListener("storage", event => {
+      if (event.key === "dashboardNotifications") {
+        renderNotificationPanel();
+      }
+    });
+
+    function logout() {
+      AppStore.clearAuth();
+      window.location.href = "index.html";
+    }
+
+    function normalizeToScale(value, max) {
+      if (!max || max <= 0) return 0;
+      return Math.min(10, (value / max) * 10);
+    }
+
+    function hexToRgba(hex, alpha = 1) {
+      const sanitized = hex.replace("#", "");
+      const bigint = parseInt(sanitized, 16);
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function renderEmptyState() {
+      const ctx = chartCanvas.getContext("2d");
+      ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+      topStudentsList.innerHTML = "<p class='muted'>No student progress data available yet.</p>";
+      topListTitle.innerText = "Top students";
+    }
+
+    const metricDefinitions = [
+      { key: "cgpa", label: "CGPA", decimals: 2 },
+      { key: "certCount", label: "Certificates" },
+      { key: "competitionCount", label: "Competition Entries" },
+      { key: "achievementScore", label: "Achievement Score" }
+    ];
+
+    function formatMetricValue(key, value) {
+      if (key === "cgpa") return value.toFixed(2);
+      return Math.round(value);
+    }
+
+    function renderTopList(topMetrics, userMetrics, year) {
+      const yearLabel = year ? `Year ${year}` : "Year –";
+      topListTitle.innerText = `Top scorer stats vs you — ${yearLabel}`;
+      const topValues = topMetrics || {};
+      const youValues = userMetrics || {};
+      topStudentsList.innerHTML = metricDefinitions.map(def => `
+        <article class="top-card">
+          <h4>${def.label}</h4>
+          <p>Top: ${formatMetricValue(def.key, topValues[def.key] ?? 0)} | You: ${formatMetricValue(def.key, youValues[def.key] ?? 0)}</p>
+        </article>
+      `).join("");
+    }
+
+    function renderChart(topMetrics, userMetrics) {
+      if (!topMetrics && !userMetrics) {
+        if (progressChart) {
+          progressChart.destroy();
+          progressChart = null;
+        }
+        return;
+      }
+      const metrics = metricDefinitions;
+      const maxCert = Math.max(topMetrics?.certCount ?? 1, userMetrics?.certCount ?? 0, 1);
+      const maxComp = Math.max(topMetrics?.competitionCount ?? 1, userMetrics?.competitionCount ?? 0, 1);
+      const maxAchievement = Math.max(topMetrics?.achievementScore ?? 1, userMetrics?.achievementScore ?? 0, 1);
+
+      const normalizeForKey = (key, value) => {
+        if (key === "cgpa") return Math.min(value ?? 0, 10);
+        if (key === "certCount") return normalizeToScale(value ?? 0, maxCert);
+        if (key === "competitionCount") return normalizeToScale(value ?? 0, maxComp);
+        if (key === "achievementScore") return normalizeToScale(value ?? 0, maxAchievement);
+        return value ?? 0;
+      };
+
+      const topData = metrics.map(def => normalizeForKey(def.key, topMetrics?.[def.key]));
+      const userData = metrics.map(def => normalizeForKey(def.key, userMetrics?.[def.key]));
+
+      const datasets = [
+        {
+          label: "Top scorer",
+          data: topData,
+          backgroundColor: hexToRgba(colorPalette.top, 0.65),
+          borderColor: colorPalette.top,
+          borderWidth: 1,
+          borderRadius: 6
+        },
+        {
+          label: "You",
+          data: userData,
+          backgroundColor: hexToRgba(colorPalette.you, 0.65),
+          borderColor: colorPalette.you,
+          borderWidth: 1,
+          borderRadius: 6
+        }
+      ];
+
+      const config = {
+        type: "bar",
+        data: {
+          labels: metrics.map(def => def.label),
+          datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 10,
+              ticks: { stepSize: 2 }
+            }
+          },
+          plugins: {
+            legend: {
+              position: "bottom"
+            },
+            tooltip: {
+              callbacks: {
+                label(context) {
+                  return `${context.dataset.label}: ${context.formattedValue}`;
+                }
+              }
+            }
+          }
+        }
+      };
+
+      if (progressChart) {
+        progressChart.destroy();
+      }
+      progressChart = new Chart(chartCanvas, config);
+    }
+
+    async function fetchTopScorers(year) {
+      try {
+        const payload = await Api.getTopScorers(year);
+        return payload?.topMetrics ?? null;
+      } catch (err) {
+        console.error("Failed to load top scorers:", err);
+        return null;
+      }
+    }
+
+    async function fetchUserDocuments() {
+      const [certsRes, compsRes] = await Promise.all([
+        Api.getCertificationDocuments(user.username),
+        Api.getCompetitionDocuments(user.username)
+      ]);
+      return {
+        certifications: certsRes.documents || [],
+        competitions: compsRes.documents || []
+      };
+    }
+
+    function createBaselineEntry() {
+      const profile = user.studentProfile || {};
+      return {
+        username: user.username,
+        displayName: profile.name || user.username,
+        year: Number(profile.yearOfStudy) || null,
+        cgpa: Number(profile.cgpa) || 0,
+        certCount: 0,
+        competitionCount: 0,
+        achievementScore: 0
+      };
+    }
+
+    function computeUserCelebrations(entry, docs) {
+      entry.certCount = docs.certifications.filter(doc => doc.studentUsername === user.username).length;
+      entry.competitionCount = docs.competitions.filter(doc => doc.studentUsername === user.username).length;
+      entry.achievementScore = entry.certCount + entry.competitionCount + (entry.cgpa || 0);
+    }
+
+    async function initProgressView() {
+      const year = Number(user.studentProfile?.yearOfStudy) || 1;
+      if (!year) {
+        renderEmptyState();
+        return;
+      }
+      const [topScorers, userDocs] = await Promise.all([
+        fetchTopScorers(year),
+        fetchUserDocuments()
+      ]);
+      const topMetrics = topScorers;
+      const userMetrics = createBaselineEntry();
+      computeUserCelebrations(userMetrics, userDocs);
+      renderTopList(topMetrics, userMetrics, year);
+      renderChart(topMetrics, userMetrics);
+    }
+
+    renderNotificationPanel();
+    initProgressView();
+  </script>
+</body>
+</html>

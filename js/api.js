@@ -100,6 +100,11 @@ window.Api = {
 
     createCompetitionDocument(data) {
         return request("/documents/competition", { method: "POST", body: JSON.stringify(data) });
+    },
+
+    getTopScorers(year) {
+        const q = year ? `?year=${encodeURIComponent(year)}` : "";
+        return request(`/reports/top-scorers${q}`);
     }
 };
 

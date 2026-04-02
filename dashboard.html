@@ -195,6 +195,8 @@
     <aside class="sidebar">
       <h2>Student Menu</h2>
       <button class="side-link active" onclick="showPage('dashboardPage', this)">Dashboard</button>
+      <button class="side-link" onclick="showPage('connectionsPage', this)">Teacher Connections</button>
+      <button class="side-link" onclick="window.location.href='students_progress.html'">Student Progress</button>
       <button class="side-link" onclick="showPage('competitionPage', this)">Competition Report</button>
       <button class="side-link" onclick="showPage('academicsPage', this)">Academics Report</button>
       <button class="side-link" onclick="showPage('certificationsPage', this)">Certifications</button>
@@ -243,31 +245,6 @@
         </div>
 
         <div class="row">
-          <div class="card" style="width:100%;">
-            <h3>Teacher Group Requests</h3>
-            <p class="muted">Accept request to allow teacher access.</p>
-            <div class="table-wrap">
-              <table id="studentRequestsTable">
-                <thead><tr><th>Teacher</th><th>Department</th><th>Group</th><th>Status</th><th>Action</th></tr></thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="card" style="width:100%;">
-            <h3>Notifications</h3>
-            <p class="muted">Send a quick notification to your connected teacher. View all messages using the bell in the header.</p>
-            <div class="grid">
-              <select id="notifyTeacherSelect"></select>
-              <textarea id="studentNotificationMsg" placeholder="Type notification for selected teacher"></textarea>
-              <button onclick="sendNotificationToTeacher()">Send Notification</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="row">
           <div class="card" style="min-width:350px;max-width:48%;">
             <h3>Result History</h3>
             <div class="table-wrap">
@@ -287,6 +264,32 @@
           <div class="card" style="width:100%;">
             <h3>Available Tests</h3>
             <div id="testsContainer" class="tests"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="connectionsPage" class="page">
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Teacher Group Requests</h3>
+            <p class="muted">Accept requests so your teacher can access your performance data.</p>
+            <div class="table-wrap">
+              <table id="studentRequestsTable">
+                <thead><tr><th>Teacher</th><th>Department</th><th>Group</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Notifications</h3>
+            <p class="muted">Send a quick notification to your connected teachers. You can revisit the full stream with the bell icon above.</p>
+            <div class="grid">
+              <select id="notifyTeacherSelect"></select>
+              <textarea id="studentNotificationMsg" placeholder="Type notification for selected teacher"></textarea>
+              <button onclick="sendNotificationToTeacher()">Send Notification</button>
+            </div>
           </div>
         </div>
       </section>
@@ -322,11 +325,17 @@
 
   document.getElementById("welcomeText").innerText = `Welcome, ${(user.studentProfile?.name || user.username)} (student)`;
 
-  if (user.studentProfile) {
-    document.getElementById("studentProfileRow").style.display = "flex";
-    const p = user.studentProfile;
-    document.getElementById("studentProfileText").innerText = `Name: ${p.name || user.username} | Roll No: ${p.rollNo || '-'} | Department: ${p.department || '-'} | Academics CGPA: ${p.cgpa ?? '-'}`;
+  function updateStudentProfile(targetUser) {
+    const profile = targetUser?.studentProfile;
+    if (profile) {
+      document.getElementById("studentProfileRow").style.display = "flex";
+      document.getElementById("studentProfileText").innerText = `Name: ${profile.name || targetUser.username} | Roll No: ${profile.rollNo || '-'} | Department: ${profile.department || '-'} | Year of Study: ${profile.yearOfStudy ?? '-'} | Academics CGPA: ${profile.cgpa ?? '-'}`;
+    } else {
+      document.getElementById("studentProfileRow").style.display = "none";
+    }
   }
+
+  updateStudentProfile(user);
 
   const allRequests = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
   const currentRollNo = (user.studentProfile?.rollNo || user.studentProfile?.rollNumber || "").trim().toLowerCase();
@@ -409,6 +418,7 @@
       if (meRes?.user) {
         user = meRes.user;
         AppStore.setAuth(user, localStorage.getItem("token"));
+        updateStudentProfile(user);
       }
 
       const [testsRes, resultsRes] = await Promise.all([Api.getTests(), Api.getResults()]);

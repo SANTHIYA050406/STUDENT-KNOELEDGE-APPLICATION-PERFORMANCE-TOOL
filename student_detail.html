@@ -142,7 +142,7 @@
       const profile = student?.studentProfile || {};
 
       document.getElementById("titleText").innerText = `Student Detail - ${profile.name || selectedStudentUsername}`;
-      document.getElementById("profileText").innerText = `Name: ${profile.name || selectedStudentUsername} | Roll No: ${profile.rollNo || '-'} | Department: ${profile.department || '-'} | CGPA: ${profile.cgpa ?? '-'}`;
+      document.getElementById("profileText").innerText = `Name: ${profile.name || selectedStudentUsername} | Roll No: ${profile.rollNo || '-'} | Department: ${profile.department || '-'} | Year of Study: ${profile.yearOfStudy ?? '-'} | CGPA: ${profile.cgpa ?? '-'}`;
 
       const academics = academicsRes.documents || [];
       fillTable("#academicTable tbody", academics.map(e => `<tr><td>${e.semesterNo}</td><td>${e.fileName}</td><td><a class="link" href="${e.pdfProof.dataUrl}" download="${e.pdfProof.name}">Open PDF</a></td><td>${new Date(e.updatedAt).toLocaleString()}</td></tr>`).join(""), 4, "No academic PDFs.");

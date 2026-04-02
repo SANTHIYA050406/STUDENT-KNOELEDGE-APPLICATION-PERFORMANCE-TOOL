@@ -82,7 +82,7 @@ public class AuthServlet extends BaseServlet {
             }
 
             try (PreparedStatement ps = conn.prepareStatement(
-                "INSERT INTO users (username,password_hash,role,student_name,roll_no,department,cgpa,teacher_name,faculty_id) VALUES (?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO users (username,password_hash,role,student_name,roll_no,department,cgpa,year_of_study,teacher_name,faculty_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
                 PreparedStatement.RETURN_GENERATED_KEYS
             )) {
                 ps.setString(1, username);
@@ -92,8 +92,9 @@ public class AuthServlet extends BaseServlet {
                 ps.setString(5, studentProfile == null ? null : strNull(studentProfile.get("rollNo")));
                 ps.setString(6, studentProfile != null ? strNull(studentProfile.get("department")) : (teacherProfile == null ? null : strNull(teacherProfile.get("department"))));
                 ps.setObject(7, studentProfile == null ? null : numNull(studentProfile.get("cgpa")));
-                ps.setString(8, teacherProfile == null ? null : strNull(teacherProfile.get("name")));
-                ps.setString(9, teacherProfile == null ? null : strNull(teacherProfile.get("facultyId")));
+                ps.setObject(8, studentProfile == null ? null : intNull(studentProfile.get("yearOfStudy")));
+                ps.setString(9, teacherProfile == null ? null : strNull(teacherProfile.get("name")));
+                ps.setString(10, teacherProfile == null ? null : strNull(teacherProfile.get("facultyId")));
                 ps.executeUpdate();
 
                 ResultSet keys = ps.getGeneratedKeys();
@@ -152,12 +153,13 @@ public class AuthServlet extends BaseServlet {
         user.put("role", role);
 
         if ("student".equals(role)) {
-            user.put("studentProfile", Map.of(
-                "name", rs.getString("student_name"),
-                "rollNo", rs.getString("roll_no"),
-                "department", rs.getString("department"),
-                "cgpa", rs.getObject("cgpa")
-            ));
+                user.put("studentProfile", Map.of(
+                    "name", rs.getString("student_name"),
+                    "rollNo", rs.getString("roll_no"),
+                    "department", rs.getString("department"),
+                    "cgpa", rs.getObject("cgpa"),
+                    "yearOfStudy", rs.getObject("year_of_study")
+                ));
             user.put("teacherProfile", null);
         } else {
             user.put("studentProfile", null);
@@ -174,6 +176,7 @@ public class AuthServlet extends BaseServlet {
     private String str(Object v) { return v == null ? "" : String.valueOf(v).trim(); }
     private String strNull(Object v) { String s = str(v); return s.isBlank() ? null : s; }
     private Double numNull(Object v) { if (v == null) return null; try { return Double.parseDouble(String.valueOf(v)); } catch (Exception ex) { return null; } }
+    private Integer intNull(Object v) { if (v == null) return null; try { return Integer.parseInt(String.valueOf(v)); } catch (Exception ex) { return null; } }
     @SuppressWarnings("unchecked")
     private Map<String, Object> map(Object v) { return v == null ? null : (Map<String, Object>) v; }
 }
