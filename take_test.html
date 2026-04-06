@@ -40,6 +40,10 @@
           <input type="search" placeholder="Search questions or filter by topic" />
         </div>
         <div class="actions">
+          <div class="timer-chip">
+            <span>Time left</span>
+            <strong id="testTimer">--:--</strong>
+          </div>
           <button type="button" class="pill" onclick="backToDashboard()">Back</button>
         </div>
       </header>
@@ -57,6 +61,38 @@
   <script src="js/api.js"></script>
 <script>
 let currentTest = null;
+const timerDisplay = document.getElementById("testTimer");
+let timerInterval = null;
+let remainingSeconds = 0;
+
+function updateTimerDisplay(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    timerDisplay.textContent = `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+function stopTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+}
+
+function startTimer(minutes) {
+    stopTimer();
+    remainingSeconds = Math.max(0, Math.round((minutes || 30) * 60));
+    updateTimerDisplay(remainingSeconds);
+    timerInterval = setInterval(() => {
+        remainingSeconds -= 1;
+        if (remainingSeconds <= 0) {
+            stopTimer();
+            alert("Time is up! The test will be submitted automatically.");
+            submitTest();
+            return;
+        }
+        updateTimerDisplay(remainingSeconds);
+    }, 1000);
+}
 
 async function loadTest() {
     const user = AppStore.getState().user;
@@ -82,6 +118,7 @@ async function loadTest() {
                 }).join("")}
             </div>
         `).join("");
+        startTimer(test.duration || 30);
     } catch (err) {
         alert(err.message);
     }
@@ -90,6 +127,7 @@ async function loadTest() {
 async function submitTest() {
     if (!currentTest) return;
 
+    stopTimer();
     const answers = currentTest.questions.map((_, i) => {
         const selected = document.querySelector(`input[name="q${i}"]:checked`);
         return selected ? selected.value : "";
@@ -104,6 +142,7 @@ async function submitTest() {
 }
 
 function backToDashboard() {
+    stopTimer();
     window.location.href = "dashboard.html";
 }
 
@@ -111,4 +150,3 @@ loadTest();
 </script>
 </body>
 </html>
-

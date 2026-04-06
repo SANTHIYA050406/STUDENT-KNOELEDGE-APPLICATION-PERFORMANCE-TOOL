@@ -193,6 +193,26 @@ body {
   color: #fff;
 }
 
+.timer-chip {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #fff;
+  gap: 0;
+  min-width: 90px;
+}
+
+.timer-chip strong {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
 /* Form Input Styles */
 input,
 select,
