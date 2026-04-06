@@ -106,6 +106,10 @@
     if (!user || user.role !== "student") window.location.href = "index.html";
 
     // Notification functions
+    function noteRecipient(note) {
+      return note.toUsername ?? note.to ?? "";
+    }
+
     function toggleNotificationPanel() {
       const panel = document.getElementById("notificationPanel");
       panel.style.display = panel.style.display === "block" ? "none" : "block";
@@ -119,7 +123,10 @@
 
     function getMyNotifications() {
       const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
-      return notes.filter(n => n.to === user.username || n.to === "all");
+      return notes.filter(n => {
+        const recipient = noteRecipient(n);
+        return recipient === user.username || recipient === "all";
+      });
     }
 
     function renderNotificationPanel() {
