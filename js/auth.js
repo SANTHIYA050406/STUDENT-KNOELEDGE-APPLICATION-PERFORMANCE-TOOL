@@ -18,13 +18,13 @@ document.getElementById("loginForm").addEventListener("submit", async function (
             return;
         }
 
-        if (role === "admin" && !(user.role === "teacher" || user.role === "admin")) {
-            alert("This account is not a teacher/admin account.");
+        if (role === "teacher" && !(user.role === "teacher" || user.role === "admin")) {
+            alert("This account is not a teacher account.");
             return;
         }
 
         AppStore.setAuth(user, token);
-        window.location.href = role === "student" ? "dashboard2.html" : "admin_dashboard.html";
+        window.location.href = role === "student" ? "dashboard.html" : "admin_dashboard.html";
     } catch (err) {
         const msg = String(err.message || "");
         if (msg.toLowerCase().includes("invalid credentials")) {

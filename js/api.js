@@ -6,9 +6,10 @@ function authHeaders() {
 }
 
 async function request(path, options = {}) {
+    const isFormData = options.body instanceof FormData;
     const response = await fetch(`${API_BASE}${path}`, {
         headers: {
-            "Content-Type": "application/json",
+            ...(isFormData ? {} : { "Content-Type": "application/json" }),
             ...authHeaders(),
             ...(options.headers || {})
         },

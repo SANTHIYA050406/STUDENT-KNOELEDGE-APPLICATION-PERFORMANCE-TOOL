@@ -1,26 +1,60 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Take Test</title>
-    <style>
-        body { font-family: Arial, sans-serif; background:#f5f8ff; margin:0; }
-        .header { background:#1e3a8a; color:#fff; padding:12px 20px; display:flex; justify-content:space-between; }
-        .container { max-width:900px; margin:16px auto; padding:0 12px; }
-        .card { background:#fff; border:1px solid #d6e1f2; border-radius:10px; padding:12px; margin-bottom:10px; }
-        button { padding:8px 12px; }
-    </style>
+    <link rel="stylesheet" href="css/hcare.css">
 </head>
 <body>
-<div class="header">
-    <h2 id="testTitle">Take Test</h2>
-    <button onclick="backToDashboard()">Back</button>
-</div>
-<div class="container" id="testContainer"></div>
-<div class="container"><button onclick="submitTest()">Submit Test</button></div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">H</div>
+        <div>
+          <strong>SKAPT</strong>
+          <small>Test Hall</small>
+        </div>
+      </div>
+      <nav>
+        <button class="nav-link" onclick="window.location.href='dashboard.html'">Dashboard</button>
+        <button class="nav-link" onclick="window.location.href='create_test.html'">Create Test</button>
+        <button class="nav-link active" onclick="window.location.href='take_test.html'">Take Test</button>
+        <button class="nav-link" onclick="window.location.href='students_progress.html'">Progress</button>
+        <button class="nav-link" onclick="window.location.href='student_detail.html'">Student Detail</button>
+      </nav>
+      <div class="sidebar-cta">
+        <strong>Stay focused</strong>
+        <p>Attempt the questions, then submit to record your score.</p>
+        <a href="mailto:support@studenttool.com">Need proctor help?</a>
+      </div>
+    </aside>
 
-<script src="js/store.js"></script>
-<script src="js/api.js"></script>
+    <div class="content">
+      <header class="top-bar">
+        <div class="title-block">
+          <p class="eyebrow">Test session</p>
+          <h2 id="testTitle">Take Test</h2>
+        </div>
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="search" placeholder="Search questions or filter by topic" />
+        </div>
+        <div class="actions">
+          <button type="button" class="pill" onclick="backToDashboard()">Back</button>
+        </div>
+      </header>
+
+      <div class="container">
+        <div id="testContainer" class="card"></div>
+        <div class="card">
+          <button class="pill" onclick="submitTest()">Submit Test</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/store.js"></script>
+  <script src="js/api.js"></script>
 <script>
 let currentTest = null;
 
@@ -77,3 +111,4 @@ loadTest();
 </script>
 </body>
 </html>
+

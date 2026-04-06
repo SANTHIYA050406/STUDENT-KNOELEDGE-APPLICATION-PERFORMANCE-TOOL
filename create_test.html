@@ -4,334 +4,41 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Create / Manage Tests</title>
-  <style>
-    :root {
-      --bg: #eef3ff;
-      --bg2: #fef7ea;
-      --panel: #ffffff;
-      --stroke: #d8e3f2;
-      --text: #14223c;
-      --muted: #607086;
-      --brand: #0f766e;
-      --brand2: #115e59;
-      --danger: #dc2626;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
-      background:
-        radial-gradient(circle at 10% 10%, #fff6d9 0, #fff6d9 15%, transparent 16%),
-        radial-gradient(circle at 80% 5%, #d6f6ef 0, #d6f6ef 14%, transparent 16%),
-        linear-gradient(160deg, var(--bg), var(--bg2));
-      color: var(--text);
-      min-height: 100vh;
-    }
-    .layout {
-      display: flex;
-      min-height: 100vh;
-    }
-    .sidebar {
-      width: 240px;
-      padding: 28px 20px;
-      background: linear-gradient(180deg, #1f356c, #115e59);
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      position: sticky;
-      top: 0;
-    }
-    .sidebar h2 {
-      margin: 0 0 12px;
-      font-size: 18px;
-      letter-spacing: 0.05em;
-    }
-    .sidebar-link, .sidebar-button {
-      border-radius: 10px;
-      border: 1px solid transparent;
-      padding: 10px 14px;
-      font-weight: 700;
-      text-decoration: none;
-      color: #f8fbff;
-      background: transparent;
-      cursor: pointer;
-      transition: background 0.2s, border-color 0.2s;
-      text-align: left;
-    }
-    .sidebar-link:hover, .sidebar-button:hover {
-      background: rgba(255,255,255,0.12);
-      border-color: rgba(255,255,255,0.35);
-    }
-    .sidebar-link.active {
-      background: rgba(255,255,255,0.18);
-      border-color: rgba(255,255,255,0.45);
-    }
-    .sidebar-button {
-      background: rgba(255,255,255,0.10);
-      border: 1px solid rgba(255,255,255,0.28);
-      text-align: center;
-      margin-top: auto;
-    }
-    .main {
-      flex: 1;
-      padding: 30px 40px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-    .main-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 20px;
-      align-items: flex-start;
-    }
-    .main-header h1 {
-      margin: 4px 0 0;
-      font-size: 28px;
-    }
-    .label {
-      margin: 0;
-      font-size: 13px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-    .header-actions {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }
-    .notification-area {
-      position: relative;
-    }
-    .notification-bell {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.45);
-      background: rgba(0, 0, 0, 0.08);
-      color: var(--text);
-      font-size: 18px;
-      cursor: pointer;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .notification-count {
-      position: absolute;
-      top: 4px;
-      right: 4px;
-      background: #facc15;
-      color: #1f2a3a;
-      border-radius: 50%;
-      padding: 2px 6px;
-      font-size: 10px;
-      font-weight: 700;
-      display: none;
-    }
-    .notification-panel {
-      position: absolute;
-      right: 0;
-      top: 52px;
-      width: 320px;
-      background: #fff;
-      border-radius: 14px;
-      border: 1px solid #cbd6e9;
-      box-shadow: 0 18px 40px rgba(10,26,55,.25);
-      transform-origin: top right;
-      transform: scale(0.95);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s ease, transform 0.2s ease;
-      z-index: 10;
-    }
-    .notification-panel.open {
-      opacity: 1;
-      transform: scale(1);
-      pointer-events: auto;
-    }
-    .notification-panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      border-bottom: 1px solid #edf2f8;
-      font-weight: 700;
-    }
-    .notification-items {
-      max-height: 240px;
-      overflow-y: auto;
-    }
-    .notification-item {
-      padding: 10px 16px;
-      border-bottom: 1px solid #edf2f8;
-    }
-    .notification-item:last-child {
-      border-bottom: none;
-    }
-    .notification-item strong {
-      display: block;
-      margin-bottom: 4px;
-      font-size: 13px;
-    }
-    .notification-item span {
-      font-size: 12px;
-      color: var(--muted);
-    }
-    .notification-clear {
-      background: transparent;
-      border: none;
-      color: var(--brand2);
-      font-weight: 700;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    button, .primary {
-      border: none;
-      border-radius: 10px;
-      padding: 10px 18px;
-      font-weight: 700;
-      cursor: pointer;
-      background: linear-gradient(135deg, var(--brand), var(--brand2));
-      color: #fff;
-    }
-    .ghost-link {
-      color: #fff;
-      font-weight: 700;
-      text-decoration: none;
-      align-self: center;
-    }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--stroke);
-      border-radius: 20px;
-      padding: 24px;
-      box-shadow: 0 14px 35px rgba(15, 25, 47, 0.15);
-    }
-    .panel h3 {
-      margin: 0 0 6px;
-      font-weight: 600;
-      color: #0f2a54;
-    }
-    .panel .muted {
-      margin: 0;
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin: 16px 0 0;
-    }
-    input, textarea, select {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid #cbd6e9;
-      font-family: inherit;
-      font-size: 14px;
-      background: #fdfdfd;
-    }
-    textarea {
-      min-height: 90px;
-      resize: vertical;
-    }
-    .question-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 10px;
-      margin-top: 8px;
-    }
-    .question-row input {
-      flex: 1;
-    }
-    .question-card {
-      padding: 16px;
-      border: 1px solid #e0e7f5;
-      border-radius: 14px;
-      background: #fbfdff;
-      margin-top: 14px;
-    }
-    .question-card h4 {
-      margin-top: 0;
-    }
-    .table-wrap {
-      max-height: 280px;
-      overflow: auto;
-      border: 1px solid #dce6f3;
-      border-radius: 12px;
-      margin-top: 12px;
-      background: #fbfdff;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    th, td {
-      padding: 10px;
-      text-align: left;
-      border-bottom: 1px solid #edf2f8;
-    }
-    th {
-      background: linear-gradient(120deg, #365ea7, #2f4f93);
-      color: #fff;
-      font-size: 12px;
-      position: sticky;
-      top: 0;
-    }
-    .actions {
-      display: flex;
-      gap: 8px;
-    }
-    .danger {
-      background: linear-gradient(135deg, #e11d48, var(--danger));
-    }
-    @media (max-width: 960px) {
-      .layout {
-        flex-direction: column;
-      }
-      .sidebar {
-        width: 100%;
-        position: relative;
-        flex-direction: row;
-        flex-wrap: wrap;
-      }
-      .sidebar h2 {
-        width: 100%;
-      }
-      .sidebar-link {
-        flex: 1 1 45%;
-      }
-      .main {
-        padding: 24px 18px;
-      }
-      .main-header {
-        flex-direction: column;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="css/hcare.css">
 </head>
 <body>
-  <div class="layout">
+  <div class="app-shell">
     <aside class="sidebar">
-      <h2>Teacher Menu</h2>
-      <a class="sidebar-link" href="teacher_groups.html">My Groups</a>
-      <a class="sidebar-link" href="admin_dashboard.html">Dashboard</a>
-      <a class="sidebar-link active" href="create_test.html">Create Test</a>
-      <button class="sidebar-button" onclick="logout()">Logout</button>
-    </aside>
-    <div class="main">
-      <div class="main-header">
+      <div class="brand">
+        <div class="logo">H</div>
         <div>
-          <p class="label">Test builder</p>
-          <h1>Create / Manage Tests</h1>
+          <strong>SKAPT</strong>
+          <small>Teacher Hub</small>
+        </div>
+      </div>
+      <nav>
+        <button class="nav-link" onclick="window.location.href='admin_dashboard.html'">Dashboard</button>
+        <button class="nav-link" onclick="window.location.href='teacher_groups.html'">My Groups</button>
+        <button class="nav-link active" onclick="window.location.href='create_test.html'">Create Test</button>
+      </nav>
+      <div class="sidebar-cta">
+        <strong>Create test</strong>
+        <p>Keep question banks updated and automatically sync with student dashboards.</p>
+        <a href="mailto:support@studenttool.com">Need help?</a>
+      </div>
+    </aside>
+    <div class="content">
+      <header class="top-bar">
+        <div class="title-block">
+          <p class="eyebrow">Test builder</p>
+          <h2>Create / Manage Tests</h2>
           <p class="muted">Build question banks or keep existing tests in sync from this single console.</p>
         </div>
-        <div class="header-actions">
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="search" placeholder="Search tests, sections, or tags" />
+        </div>
+        <div class="actions">
           <div class="notification-area">
             <button id="notificationBellButton" class="notification-bell" type="button" aria-label="Notifications" onclick="toggleNotificationPanel()">
               <span class="bell-icon">🔔</span>
@@ -346,11 +53,12 @@
             </div>
           </div>
           <a class="ghost-link" href="teacher_groups.html">Back to Groups</a>
-          <button onclick="logout()">Sign out</button>
+          <button type="button" class="pill" onclick="logout()">Sign out</button>
         </div>
-      </div>
+      </header>
 
-      <section class="panel">
+      <div class="container">
+        <section class="panel">
         <div class="panel-header">
           <div>
             <h3>Test definition</h3>
@@ -379,7 +87,8 @@
             <tbody id="testsBody"></tbody>
           </table>
         </div>
-      </section>
+        </section>
+      </div>
     </div>
   </div>
 
@@ -597,3 +306,4 @@
   </script>
 </body>
 </html>
+

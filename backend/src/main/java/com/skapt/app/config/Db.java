@@ -1,13 +1,14 @@
 package com.skapt.app.config;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
+import javax.sql.DataSource;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.Statement;
 
 public final class Db {
-    private static final String URL = AppConfig.get("db.url");
-    private static final String USER = AppConfig.get("db.username");
-    private static final String PASSWORD = AppConfig.get("db.password");
+    private static final DataSource DATA_SOURCE;
 
     static {
         try {
@@ -15,12 +16,24 @@ public final class Db {
         } catch (Exception ex) {
             throw new RuntimeException("MySQL driver load failed", ex);
         }
+
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(AppConfig.get("db.url"));
+        config.setUsername(AppConfig.get("db.username"));
+        config.setPassword(AppConfig.get("db.password"));
+        config.setMaximumPoolSize(10);
+        config.setMinimumIdle(5);
+        config.setConnectionTimeout(30000);
+        config.setIdleTimeout(600000);
+        config.setMaxLifetime(1800000);
+
+        DATA_SOURCE = new HikariDataSource(config);
     }
 
     private Db() {}
 
     public static Connection getConnection() throws Exception {
-        return DriverManager.getConnection(URL, USER, PASSWORD);
+        return DATA_SOURCE.getConnection();
     }
 
     public static void initializeSchema() {

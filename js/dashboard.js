@@ -137,5 +137,5 @@ function startTest(id) {
 
 function logout() {
     AppStore.clearAuth();
-    window.location.href = "index2.html";
+    window.location.href = "index.html";
 }

@@ -1,103 +1,377 @@
-* { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', sans-serif; }
-body { background: #f4f6f8; min-height:100vh; }
+/* Professional and Modern CSS for Student Knowledge Application */
 
-header { 
-    background:#667eea; color:white; padding:15px 30px; display:flex; justify-content:space-between; align-items:center;
+:root {
+  --bg-app: #0d0f20;
+  --bg-panel: #f8f9ff;
+  --bg-soft: #eef2ff;
+  --sidebar: #1b1c3a;
+  --accent: #7c3aed;
+  --accent-soft: #6ee7b7;
+  --text-dark: #0c1223;
+  --muted: #5f6b80;
+  --stroke: rgba(15, 23, 42, 0.12);
+  --shadow: 0 35px 60px rgba(10, 8, 36, 0.35);
+  --glass: rgba(255, 255, 255, 0.9);
+  --base-dark: #0f172a;
+  --base-light: #f0f4ff;
 }
-header h2 { font-size:24px; }
-header nav a { color:white; text-decoration:none; margin-left:15px; font-weight:bold; }
-header nav a:hover { text-decoration:underline; }
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+body {
+  background: radial-gradient(circle at 10% 10%, #c5e4ff 0, transparent 35%),
+    radial-gradient(circle at 90% 0%, #d5f6ff 0, transparent 45%),
+    linear-gradient(145deg, #0f172a, #1d2b57 60%);
+  min-height: 100vh;
+  color: var(--text-dark);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+}
 
 .card {
-    background:white; padding:30px; border-radius:12px; max-width:500px; margin:20px auto; box-shadow:0 5px 20px rgba(0,0,0,0.1);
+  background: var(--glass);
+  border-radius: 32px;
+  box-shadow: var(--shadow);
+  padding: 40px;
+  max-width: 500px;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-button { padding:10px 20px; background:#667eea; color:white; border:none; border-radius:6px; cursor:pointer; }
-button:hover { background:#5a67d8; }
+.card h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  text-align: center;
+  color: var(--text-dark);
+}
 
-input, select { padding:8px 10px; width:100%; margin-bottom:12px; border:1px solid #ccc; border-radius:5px; }
+button {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+  color: white;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
 
-table { width:100%; border-collapse:collapse; margin-top:20px; }
-table, th, td { border:1px solid #ccc; }
-th, td { padding:10px; text-align:center; }
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+}
+
+button.danger {
+  background: linear-gradient(135deg, #ef4444, #f87171);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+button.danger:hover {
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
+input,
+select,
+textarea {
+  padding: 14px 16px;
+  width: 100%;
+  margin-bottom: 16px;
+  border: 1px solid var(--stroke);
+  border-radius: 16px;
+  font-size: 15px;
+  font-family: inherit;
+  background: rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+  background: white;
+}
+
+label {
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 14px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+small.hint {
+  display: block;
+  color: #ef4444;
+  font-size: 12px;
+  margin: -12px 0 16px;
+  font-weight: 500;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+table th,
+table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--stroke);
+}
+
+table th {
+  background: var(--bg-soft);
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+table tbody tr:hover {
+  background: var(--bg-soft);
+}
+
+.table-wrap {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
 
 /* =========================
    TOP SECTION (Stats + Result History)
 ========================= */
 
 #topSection {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  margin-bottom: 30px;
 }
 
 /* Smaller stat cards */
 #topSection .stat-card {
-    width: 180px;   /* reduced width */
-    padding: 20px;
+  flex: 1;
+  background: var(--glass);
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid var(--stroke);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+#topSection .stat-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, rgba(124, 58, 237, 0.15), transparent 50%);
+  pointer-events: none;
+}
+
+#topSection .stat-card h3 {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#topSection .stat-card p {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-dark);
 }
 
 /* Result History Card */
 .result-card {
-    width: 420px;   /* fixed width */
-    padding: 20px;
+  flex: 2;
+  background: var(--glass);
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid var(--stroke);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
 }
 
 /* Make table header fixed */
 .result-card table {
-    width: 100%;
-    border-collapse: collapse;
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0;
 }
 
-/* Make only tbody scrollable */
 .result-card thead,
 .result-card tbody tr {
-    display: table;
-    width: 100%;
-    table-layout: fixed;
+  display: table;
+  width: 100%;
+  table-layout: fixed;
 }
 
 .result-card tbody {
-    display: block;
-    max-height: 200px;
-    overflow-y: auto;
+  display: block;
+  max-height: 300px;
+  overflow-y: auto;
 }
-
 
 /* =========================
    AVAILABLE TESTS
 ========================= */
 .dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-    margin: 30px 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin: 30px 0;
 }
 
 .test-card {
-    text-align: left;
-    padding: 20px;
+  background: var(--glass);
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid var(--stroke);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  transition: all 0.2s ease;
+}
+
+.test-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.15);
 }
 
 .test-card h3 {
-    margin-bottom: 10px;
+  margin-bottom: 12px;
+  font-size: 18px;
+  color: var(--text-dark);
+}
+
+.test-card p {
+  color: var(--muted);
+  margin-bottom: 16px;
+  font-size: 14px;
 }
 
 .test-card button {
-    margin-top: 10px;
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
+.test-card button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.3);
+}
 
 /* =========================
    PERFORMANCE GRAPH
 ========================= */
 #performanceGraph {
-    margin-top: 40px;
+  margin-top: 40px;
+  background: var(--glass);
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid var(--stroke);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
 }
 
 /* =========================
-   DARK MODE
+   FORM ELEMENTS
 ========================= */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.form-row > * {
+  flex: 1;
+}
+
+/* =========================
+   UTILITY CLASSES
+========================= */
+.text-center {
+  text-align: center;
+}
+
+.text-muted {
+  color: var(--muted);
+}
+
+.mb-0 {
+  margin-bottom: 0;
+}
+
+.mb-1 {
+  margin-bottom: 8px;
+}
+
+.mb-2 {
+  margin-bottom: 16px;
+}
+
+.mb-3 {
+  margin-bottom: 24px;
+}
+
+.mt-1 {
+  margin-top: 8px;
+}
+
+.mt-2 {
+  margin-top: 16px;
+}
+
+.mt-3 {
+  margin-top: 24px;
+}
+
+/* =========================
+   RESPONSIVE DESIGN
+========================= */
+@media (max-width: 768px) {
+  .card {
+    padding: 24px;
+    margin: 16px;
+  }
+
+  #topSection {
+    flex-direction: column;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+}
 body.dark {
     background: #121212;
     color: #eee;

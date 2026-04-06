@@ -4,265 +4,136 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Teacher Dashboard</title>
-  <style>
-    :root {
-      --bg: #eef3ff;
-      --bg2: #fef7ea;
-      --panel: #fff;
-      --stroke: #d8e3f2;
-      --text: #1f2a3a;
-      --muted: #607086;
-      --brand: #0f766e;
-      --brand2: #115e59;
-      --danger: #dc2626;
-    }
-    body {
-      margin: 0;
-      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(circle at 12% 14%, #fff2cb 0, #fff2cb 14%, transparent 16%),
-        radial-gradient(circle at 88% 10%, #cff7ef 0, #cff7ef 14%, transparent 16%),
-        linear-gradient(150deg, var(--bg), var(--bg2));
-    }
-    .header {
-      background: linear-gradient(120deg, #1f356c, #115e59);
-      color: #fff;
-      padding: 14px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 8px 20px rgba(19, 37, 69, 0.2);
-    }
-    .header nav a { color: #fff; text-decoration: none; margin-left: 18px; font-weight: 700; }
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .notification-area {
-      position: relative;
-    }
-    .notification-bell {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.45);
-      background: rgba(255,255,255,.15);
-      color: #fff;
-      font-size: 18px;
-      cursor: pointer;
-      position: relative;
-    }
-    .notification-count {
-      position: absolute;
-      top: 4px;
-      right: 4px;
-      background: #facc15;
-      color: #1f2a3a;
-      border-radius: 50%;
-      padding: 2px 6px;
-      font-size: 10px;
-      font-weight: 700;
-      display: none;
-    }
-    .notification-panel {
-      position: absolute;
-      right: 0;
-      top: 52px;
-      width: 320px;
-      background: #fff;
-      border-radius: 14px;
-      border: 1px solid #cbd6e9;
-      box-shadow: 0 18px 40px rgba(10,26,55,.25);
-      transform-origin: top right;
-      transform: scale(0.95);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s ease, transform 0.2s ease;
-      z-index: 10;
-    }
-    .notification-panel.open {
-      opacity: 1;
-      transform: scale(1);
-      pointer-events: auto;
-    }
-    .notification-panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      border-bottom: 1px solid #edf2f8;
-      font-weight: 700;
-    }
-    .notification-items {
-      max-height: 240px;
-      overflow-y: auto;
-    }
-    .notification-item {
-      padding: 10px 16px;
-      border-bottom: 1px solid #edf2f8;
-    }
-    .notification-item:last-child {
-      border-bottom: none;
-    }
-    .notification-item strong {
-      display: block;
-      margin-bottom: 4px;
-      font-size: 13px;
-    }
-    .notification-item span {
-      font-size: 12px;
-      color: var(--muted);
-    }
-    .notification-clear {
-      background: transparent;
-      border: none;
-      color: #1f356c;
-      font-weight: 700;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .container { padding: 22px; }
-    .row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--stroke);
-      border-radius: 13px;
-      box-shadow: 0 10px 24px rgba(18,33,61,.08);
-      padding: 15px;
-      flex: 1;
-      min-width: 260px;
-    }
-    .card h3 { margin: 0 0 10px; color: #213754; }
-    .muted { margin: 0; color: var(--muted); font-size: 13px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 9px; }
-    input, select, textarea, button {
-      width: 100%; box-sizing: border-box; padding: 9px 10px; border-radius: 8px;
-      border: 1px solid #cad6e6; font-family: inherit; font-size: 14px;
-    }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: #2f63b4; box-shadow: 0 0 0 3px #dce8ff; }
-    textarea { min-height: 70px; resize: vertical; }
-    button {
-      border: none; color: #fff; font-weight: 700; cursor: pointer;
-      background: linear-gradient(135deg, var(--brand), var(--brand2));
-    }
-    .danger { background: linear-gradient(135deg, #e11d48, var(--danger)); }
-    .table-wrap {
-      max-height: 220px; overflow-y: auto; overflow-x: auto;
-      border: 1px solid #dce6f3; border-radius: 10px; background: #fbfdff; margin-top: 8px;
-    }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { font-size: 13px; padding: 8px; text-align: center; border-bottom: 1px solid #edf2f8; }
-    th { background: linear-gradient(120deg,#365ea7,#2f4f93); color: #fff; position: sticky; top: 0; }
-    .student {
-      border: 1px solid #dbe6f4; border-radius: 9px; padding: 10px; margin-bottom: 8px; background: #fafcff;
-    }
-    .group-title { margin: 12px 0 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-    .link { color: #163f7b; font-weight: 700; }
-  </style>
+  <link rel="stylesheet" href="css/hcare.css">
 </head>
 <body>
-  <div class="header">
-    <h2 id="welcomeText">Teacher Dashboard</h2>
-    <div class="header-actions">
-      <div class="notification-area">
-        <button id="notificationBellButton" class="notification-bell" type="button" onclick="toggleNotificationPanel()" aria-label="Notifications">
-          <span class="bell-icon">🔔</span>
-          <span id="notificationCount" class="notification-count"></span>
-        </button>
-        <div id="notificationPanel" class="notification-panel">
-          <div class="notification-panel-header">
-            <span>Notifications</span>
-            <button type="button" class="notification-clear" onclick="clearNotifications()">Clear All</button>
-          </div>
-          <div id="notificationList" class="notification-items"></div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">H</div>
+        <div>
+          <strong>SKAPT</strong>
+          <small>Teacher Hub</small>
         </div>
       </div>
       <nav>
-        <a href="teacher_groups.html">My Groups</a>
-        <a href="create_test.html">Create Test</a>
-        <a href="#" onclick="logout()">Logout</a>
+        <button class="nav-link active" onclick="window.location.href='admin_dashboard.html'">Dashboard</button>
+        <button class="nav-link" onclick="window.location.href='teacher_groups.html'">My Groups</button>
+        <button class="nav-link" onclick="window.location.href='create_test.html'">Create Test</button>
       </nav>
-    </div>
-  </div>
-
-  <div class="container">
-    <div class="row">
-      <div class="card"><h3>Total Tests Created</h3><p id="totalTestsCreated">0</p></div>
-      <div class="card"><h3>Total Tests Attempted</h3><p id="totalTestsAttempted">0</p></div>
-      <div class="card"><h3>Connected Students</h3><p id="connectedStudents">0</p></div>
-    </div>
-
-    <div class="row" id="teacherProfileRow" style="display:none;">
-      <div class="card" style="width:100%;">
-        <h3>Teacher Basic Details</h3>
-        <p id="teacherProfileText">-</p>
+      <div class="sidebar-cta">
+        <strong>Need Guidance?</strong>
+        <p>Connect with support for group and test help.</p>
+        <a href="mailto:support@studenttool.com">Contact mentor</a>
       </div>
-    </div>
+    </aside>
 
-    <div class="row">
-      <div class="card" style="width:100%;">
-        <h3>Pending Requests</h3>
-        <div class="table-wrap">
-          <table id="pendingRequestsTable">
-            <thead><tr><th>Student</th><th>Roll No</th><th>Group</th><th>Status</th><th>Requested On</th></tr></thead>
-            <tbody></tbody>
-          </table>
+    <div class="content">
+      <header class="top-bar">
+        <div class="title-block">
+          <p class="eyebrow">Teacher portal</p>
+          <h2 id="welcomeText">Teacher Dashboard</h2>
         </div>
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="card" style="width:100%;">
-        <h3>Manage My Groups</h3>
-        <p class="muted">Group management now lives on a focused page. Use the “My Groups” link in the header to open it.</p>
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="card" style="width:100%;">
-        <h3>Student Feedback</h3>
-        <p class="muted">Send one-line feedback to connected students.</p>
-        <div class="grid">
-          <select id="feedbackStudentSelect"></select>
-          <select id="feedbackTemplate">
-            <option value="excellent.keep going">excellent.keep going</option>
-            <option value="good">good</option>
-            <option value="needs improvement">needs improvement</option>
-          </select>
-          <button onclick="sendFeedbackToStudent()">Send Feedback</button>
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="search" placeholder="Search students, tests, or groups" />
         </div>
-        <h4>Feedback Sent</h4>
-        <div class="table-wrap">
-          <table id="teacherFeedbackTable">
-            <thead><tr><th>Student</th><th>Feedback</th><th>Time</th></tr></thead>
-            <tbody></tbody>
-          </table>
+        <div class="actions">
+          <div class="notification-area">
+            <button id="notificationBellButton" class="notification-bell" type="button" onclick="toggleNotificationPanel()" aria-label="Notifications">
+              <span class="bell-icon">🔔</span>
+              <span id="notificationCount" class="notification-count"></span>
+            </button>
+            <div id="notificationPanel" class="notification-panel">
+              <div class="notification-panel-header">
+                <span>Notifications</span>
+                <button type="button" class="notification-clear" onclick="clearNotifications()">Clear All</button>
+              </div>
+              <div id="notificationList" class="notification-items"></div>
+            </div>
+          </div>
+          <button type="button" class="pill" onclick="logout()">Logout</button>
         </div>
-      </div>
-    </div>
+      </header>
 
-    <div class="row">
-      <div class="card" style="width:100%;">
-        <h3>Notifications</h3>
-        <p class="muted">Send a quick message to an accepted student; view replies through the bell above.</p>
-        <div class="grid">
-          <select id="notifyStudentSelect"></select>
-          <textarea id="teacherNotificationMsg" placeholder="Type notification for selected student"></textarea>
-          <button onclick="sendNotificationToStudent()">Send Notification</button>
+      <div class="container">
+        <div class="row">
+          <div class="card"><h3>Total Tests Created</h3><p id="totalTestsCreated">0</p></div>
+          <div class="card"><h3>Total Tests Attempted</h3><p id="totalTestsAttempted">0</p></div>
+          <div class="card"><h3>Connected Students</h3><p id="connectedStudents">0</p></div>
         </div>
-      </div>
-    </div>
 
-    <div class="row">
-      <div class="card" style="width:100%;">
-        <h3>Students Results (Accepted Students)</h3>
-        <div class="table-wrap">
-          <table id="studentsResultsTable">
-            <thead><tr><th>Student</th><th>Test</th><th>Score</th><th>Date</th></tr></thead>
-            <tbody></tbody>
-          </table>
+        <div class="row" id="teacherProfileRow" style="display:none;">
+          <div class="card" style="width:100%;">
+            <h3>Teacher Basic Details</h3>
+            <p id="teacherProfileText">-</p>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Pending Requests</h3>
+            <div class="table-wrap">
+              <table id="pendingRequestsTable">
+                <thead><tr><th>Student</th><th>Roll No</th><th>Group</th><th>Status</th><th>Requested On</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Manage My Groups</h3>
+            <p class="muted">Group management now lives on a focused page. Use the “My Groups” link in the header to open it.</p>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Student Feedback</h3>
+            <p class="muted">Send one-line feedback to connected students.</p>
+            <div class="grid">
+              <select id="feedbackStudentSelect"></select>
+              <select id="feedbackTemplate">
+                <option value="excellent.keep going">excellent.keep going</option>
+                <option value="good">good</option>
+                <option value="needs improvement">needs improvement</option>
+              </select>
+              <button onclick="sendFeedbackToStudent()">Send Feedback</button>
+            </div>
+            <h4>Feedback Sent</h4>
+            <div class="table-wrap">
+              <table id="teacherFeedbackTable">
+                <thead><tr><th>Student</th><th>Feedback</th><th>Time</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Notifications</h3>
+            <p class="muted">Send a quick message to an accepted student; view replies through the bell above.</p>
+            <div class="grid">
+              <select id="notifyStudentSelect"></select>
+              <textarea id="teacherNotificationMsg" placeholder="Type notification for selected student"></textarea>
+              <button onclick="sendNotificationToStudent()">Send Notification</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Students Results (Accepted Students)</h3>
+            <div class="table-wrap">
+              <table id="studentsResultsTable">
+                <thead><tr><th>Student</th><th>Test</th><th>Score</th><th>Date</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -562,6 +433,7 @@
 </script>
 </body>
 </html>
+
 
 
 

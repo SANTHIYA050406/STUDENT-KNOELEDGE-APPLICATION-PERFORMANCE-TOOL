@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Competition Report - SKAPT</title>
+  <link rel="stylesheet" href="css/hcare.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">S</div>
+        <div>
+          <strong>SKAPT</strong>
+          <small>Student Hub</small>
+        </div>
+      </div>
+      <nav>
+        <button class="nav-link" onclick="window.location.href='dashboard.html'">Dashboard</button>
+        <button class="nav-link" onclick="window.location.href='students_progress.html'">Student Progress</button>
+        <button class="nav-link active" onclick="window.location.href='competition_report.html'">Competition Report</button>
+        <button class="nav-link" onclick="window.location.href='academics_report.html'">Academics Report</button>
+        <button class="nav-link" onclick="window.location.href='certifications.html'">Certifications</button>
+      </nav>
+      <div class="sidebar-cta">
+        <strong>Competition</strong>
+        <p>Upload and track your competition certificates and achievements.</p>
+        <a href="mailto:support@studenttool.com">Need help?</a>
+      </div>
+    </aside>
+
+    <div class="content">
+      <header class="top-bar">
+        <div class="title-block">
+          <p class="eyebrow">Student portal</p>
+          <h2>Competition Report</h2>
+        </div>
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="search" placeholder="Search competitions or certificates" />
+        </div>
+        <div class="actions">
+          <div class="notification-area">
+            <button id="notificationBellButton" class="notification-bell" type="button" onclick="toggleNotificationPanel()" aria-label="Notifications">
+              <span class="bell-icon">🔔</span>
+              <span id="notificationCount" class="notification-count"></span>
+            </button>
+            <div id="notificationPanel" class="notification-panel">
+              <div class="notification-panel-header">
+                <span>Notifications</span>
+                <button type="button" class="notification-clear" onclick="clearNotifications()">Clear All</button>
+              </div>
+              <div id="notificationList" class="notification-items"></div>
+            </div>
+          </div>
+          <button type="button" class="pill" onclick="logout()">Logout</button>
+        </div>
+      </header>
+
+      <div class="container">
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h3>Upload Competition Certificate</h3>
+              <p class="muted">If online certificate link is not given, PDF proof is mandatory. Geo-tag photo proof is mandatory.</p>
+            </div>
+          </div>
+          <div class="grid">
+            <input id="compName" placeholder="Competition Name" />
+            <input id="compDate" type="date" />
+            <input id="compOnlineLink" type="url" placeholder="Online Certificate Link (optional)" />
+            <input id="compPdfProof" type="file" accept="application/pdf" />
+            <input id="compGeoPhotos" type="file" accept="image/*" multiple />
+            <button onclick="saveCompetitionEntry()">Update Competition Record</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h3>Competition Certificate History</h3>
+          <div class="table-wrap">
+            <table id="competitionHistoryTable">
+              <thead>
+                <tr>
+                  <th>Competition Name</th>
+                  <th>Date</th>
+                  <th>Proofs</th>
+                  <th>Geo Tag Photo Proofs</th>
+                  <th>Online Link</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/store.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    let user = AppStore.getState().user || JSON.parse(localStorage.getItem("currentUser") || "null");
+    let competitionDocs = [];
+
+    if (!user || user.role !== "student") window.location.href = "index.html";
+
+    // Notification functions
+    function toggleNotificationPanel() {
+      const panel = document.getElementById("notificationPanel");
+      panel.style.display = panel.style.display === "block" ? "none" : "block";
+    }
+
+    function clearNotifications() {
+      localStorage.removeItem("dashboardNotifications");
+      document.getElementById("notificationList").innerHTML = "";
+      document.getElementById("notificationCount").textContent = "";
+    }
+
+    function getMyNotifications() {
+      const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+      return notes.filter(n => n.to === user.username || n.to === "all");
+    }
+
+    function renderNotificationPanel() {
+      const panel = document.getElementById("notificationPanel");
+      const listEl = document.getElementById("notificationList");
+      const countEl = document.getElementById("notificationCount");
+      const notes = getMyNotifications();
+
+      countEl.textContent = notes.filter(n => !n.read).length || "";
+      listEl.innerHTML = notes.length
+        ? notes.sort((a,b)=>b.id-a.id).map(note => `
+            <div class="notification-item ${!note.read ? 'unread' : ''}" onclick="markAsRead(${note.id})">
+              <div class="notification-title">${note.title || 'Notification'}</div>
+              <div class="notification-message">${note.message}</div>
+              <div class="notification-time">${new Date(note.timestamp).toLocaleDateString()}</div>
+            </div>
+          `).join("")
+        : '<div class="notification-item"><div class="notification-message">No notifications</div></div>';
+    }
+
+    function markAsRead(id) {
+      const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+      const note = notes.find(n => n.id === id);
+      if (note) note.read = true;
+      localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
+      renderNotificationPanel();
+    }
+
+    function logout() {
+      AppStore.clear();
+      window.location.href = "index.html";
+    }
+
+    // Competition functions
+    async function loadCompetitionHistory() {
+      try {
+        const { documents } = await Api.getCompetitionDocuments();
+        competitionDocs = documents;
+        renderCompetitionTable();
+      } catch (err) {
+        console.error("Failed to load competition docs:", err);
+      }
+    }
+
+    function renderCompetitionTable() {
+      const tbody = document.querySelector("#competitionHistoryTable tbody");
+      tbody.innerHTML = competitionDocs.length
+        ? competitionDocs.map(doc => {
+            let pdfLink = '-';
+            if (doc.pdfProof?.dataUrl) {
+              const blob = dataUrlToBlob(doc.pdfProof.dataUrl);
+              const blobUrl = URL.createObjectURL(blob);
+              pdfLink = `<a href="${blobUrl}" target="_blank">View PDF</a>`;
+            }
+            let geoLinks = '-';
+            if (doc.geoProofs && doc.geoProofs.length) {
+              geoLinks = doc.geoProofs.map(p => {
+                const blob = dataUrlToBlob(p.dataUrl);
+                const blobUrl = URL.createObjectURL(blob);
+                return `<a href="${blobUrl}" target="_blank">Photo</a>`;
+              }).join(', ');
+            }
+            return `
+              <tr>
+                <td>${doc.competitionName || '-'}</td>
+                <td>${doc.competitionDate ? new Date(doc.competitionDate).toLocaleDateString() : '-'}</td>
+                <td>${pdfLink}</td>
+                <td>${geoLinks}</td>
+                <td>${doc.onlineLink ? `<a href="${doc.onlineLink}" target="_blank">Link</a>` : '-'}</td>
+              </tr>
+            `;
+          }).join("")
+        : '<tr><td colspan="5">No competition certificates uploaded yet.</td></tr>';
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function saveCompetitionEntry() {
+      const compName = document.getElementById("compName").value.trim();
+      const compDate = document.getElementById("compDate").value;
+      const compOnlineLink = document.getElementById("compOnlineLink").value.trim();
+      const compPdfProof = document.getElementById("compPdfProof").files[0];
+      const compGeoPhotos = Array.from(document.getElementById("compGeoPhotos").files);
+
+      if (!compName || !compDate) {
+        alert("Competition name and date are required.");
+        return;
+      }
+
+      if (!compOnlineLink && !compPdfProof) {
+        alert("Either online certificate link or PDF proof is required.");
+        return;
+      }
+
+      if (compGeoPhotos.length === 0) {
+        alert("Geo-tag photo proof is mandatory.");
+        return;
+      }
+
+      try {
+        const payload = {
+          competitionName: compName,
+          competitionDate: compDate,
+          onlineLink: compOnlineLink || undefined,
+          pdfProof: compPdfProof
+            ? {
+                name: compPdfProof.name,
+                dataUrl: await fileToDataUrl(compPdfProof)
+              }
+            : undefined,
+          geoProofs: await Promise.all(
+            compGeoPhotos.map(async photo => ({
+              name: photo.name,
+              dataUrl: await fileToDataUrl(photo)
+            }))
+          )
+        };
+
+        await Api.createCompetitionDocument(payload);
+        alert("Competition certificate uploaded successfully!");
+        document.getElementById("compName").value = "";
+        document.getElementById("compDate").value = "";
+        document.getElementById("compOnlineLink").value = "";
+        document.getElementById("compPdfProof").value = "";
+        document.getElementById("compGeoPhotos").value = "";
+        loadCompetitionHistory();
+      } catch (err) {
+        alert("Failed to upload competition certificate: " + err.message);
+      }
+    }
+
+    // Initialize
+    loadCompetitionHistory();
+    renderNotificationPanel();
+
+    function dataUrlToBlob(dataUrl) {
+      const arr = dataUrl.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new Blob([u8arr], { type: mime });
+    }
+  </script>
+</body>
+</html>

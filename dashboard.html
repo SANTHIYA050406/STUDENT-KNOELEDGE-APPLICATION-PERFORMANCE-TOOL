@@ -5,223 +5,57 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Student Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    :root {
-      --bg: #eef3ff;
-      --bg2: #fff7ea;
-      --panel: #fff;
-      --stroke: #d8e3f2;
-      --text: #1f2a3a;
-      --muted: #607086;
-      --brand: #0f766e;
-      --brand2: #115e59;
-      --danger: #dc2626;
-    }
-    body {
-      margin: 0;
-      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(circle at 12% 15%, #fff2cc 0, #fff2cc 14%, transparent 16%),
-        radial-gradient(circle at 90% 10%, #d6f6ef 0, #d6f6ef 14%, transparent 16%),
-        linear-gradient(150deg, var(--bg), var(--bg2));
-    }
-    .layout { display: flex; min-height: 100vh; }
-    .sidebar {
-      width: 250px; padding: 22px 14px; color: #fff;
-      background: linear-gradient(180deg, #1f3165, #17274f);
-      border-right: 1px solid rgba(255,255,255,.08);
-      box-sizing: border-box;
-    }
-    .sidebar h2 { margin: 0 0 20px; font-size: 19px; }
-    .side-link {
-      width: 100%; border: 1px solid transparent; background: transparent; color: #edf2ff;
-      text-align: left; padding: 11px 12px; border-radius: 10px; margin-bottom: 8px;
-      cursor: pointer; font-size: 14px;
-    }
-    .side-link.active, .side-link:hover {
-      background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.2);
-    }
-    .main { flex: 1; display: flex; flex-direction: column; }
-    .header {
-      background: linear-gradient(120deg, #1f356c, #115e59);
-      color: #fff; padding: 14px 24px;
-      display: flex; justify-content: space-between; align-items: center;
-      box-shadow: 0 8px 20px rgba(19,37,69,.2);
-    }
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .notification-area {
-      position: relative;
-    }
-    .notification-bell {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.45);
-      background: rgba(255,255,255,.15);
-      color: #fff;
-      font-size: 18px;
-      cursor: pointer;
-      position: relative;
-    }
-    .notification-count {
-      position: absolute;
-      top: 4px;
-      right: 4px;
-      background: #facc15;
-      color: #1f2a3a;
-      border-radius: 50%;
-      padding: 2px 6px;
-      font-size: 10px;
-      font-weight: 700;
-      display: none;
-    }
-    .notification-panel {
-      position: absolute;
-      right: 0;
-      top: 52px;
-      width: 320px;
-      background: #fff;
-      border-radius: 14px;
-      border: 1px solid #cbd6e9;
-      box-shadow: 0 18px 40px rgba(10,26,55,.25);
-      transform-origin: top right;
-      transform: scale(0.95);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s ease, transform 0.2s ease;
-      z-index: 10;
-    }
-    .notification-panel.open {
-      opacity: 1;
-      transform: scale(1);
-      pointer-events: auto;
-    }
-    .notification-panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      border-bottom: 1px solid #edf2f8;
-      font-weight: 700;
-    }
-    .notification-items {
-      max-height: 240px;
-      overflow-y: auto;
-    }
-    .notification-item {
-      padding: 10px 16px;
-      border-bottom: 1px solid #edf2f8;
-    }
-    .notification-item:last-child {
-      border-bottom: none;
-    }
-    .notification-item strong {
-      display: block;
-      margin-bottom: 4px;
-      font-size: 13px;
-    }
-    .notification-item span {
-      font-size: 12px;
-      color: var(--muted);
-    }
-    .notification-clear {
-      background: transparent;
-      border: none;
-      color: #1f356c;
-      font-weight: 700;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .header button {
-      padding: 9px 14px; border: 1px solid rgba(255,255,255,.35);
-      border-radius: 8px; background: rgba(255,255,255,.14); color: #fff; font-weight: 700; cursor: pointer;
-    }
-    .page { display: none; padding: 24px; }
-    .page.active { display: block; }
-    .row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
-    .card {
-      background: var(--panel); border: 1px solid var(--stroke); border-radius: 14px;
-      box-shadow: 0 10px 24px rgba(18,33,61,.08); padding: 16px; min-width: 300px; flex: 1;
-    }
-    .card h3 { margin: 0 0 10px; color: #213754; }
-    .muted { margin: 0; color: var(--muted); font-size: 13px; }
-
-    .table-wrap {
-      max-height: 220px; overflow-y: auto; overflow-x: auto;
-      border: 1px solid #dce6f3; border-radius: 10px; background: #fbfdff;
-    }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { font-size: 13px; padding: 9px; text-align: center; border-bottom: 1px solid #edf2f8; }
-    th { background: linear-gradient(120deg,#365ea7,#2f4f93); color: #fff; position: sticky; top: 0; }
-
-    .grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 10px; }
-    input, select, textarea, button {
-      width: 100%; box-sizing: border-box; padding: 9px 10px; border-radius: 8px;
-      border: 1px solid #cad6e6; font-family: inherit; font-size: 14px;
-    }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: #2f63b4; box-shadow: 0 0 0 3px #dce8ff; }
-    textarea { min-height: 72px; resize: vertical; }
-    button {
-      border: none; color: #fff; font-weight: 700; cursor: pointer;
-      background: linear-gradient(135deg, var(--brand), var(--brand2));
-    }
-    .danger { background: linear-gradient(135deg, #e11d48, var(--danger)); }
-
-    .chart-wrap { overflow-x: auto; }
-    .chart-box { min-width: 500px; height: 260px; }
-
-    .tests { display: flex; flex-wrap: wrap; gap: 14px; }
-    .test {
-      flex: 1 1 calc(33.33% - 14px); min-width: 230px;
-      background: #fff; border: 1px solid var(--stroke); border-radius: 12px; padding: 14px;
-    }
-
-    @media (max-width: 860px) {
-      .layout { flex-direction: column; }
-      .sidebar { width: 100%; display: flex; gap: 8px; overflow-x: auto; padding: 12px; }
-      .sidebar h2 { display: none; }
-      .side-link { margin: 0; white-space: nowrap; }
-      .page { padding: 16px; }
-    }
-  </style>
+  <link rel="stylesheet" href="css/hcare.css">
 </head>
 <body>
-  <div class="layout">
+  <div class="app-shell">
     <aside class="sidebar">
-      <h2>Student Menu</h2>
-      <button class="side-link active" onclick="showPage('dashboardPage', this)">Dashboard</button>
-      <button class="side-link" onclick="showPage('connectionsPage', this)">Teacher Connections</button>
-      <button class="side-link" onclick="window.location.href='students_progress.html'">Student Progress</button>
-      <button class="side-link" onclick="showPage('competitionPage', this)">Competition Report</button>
-      <button class="side-link" onclick="showPage('academicsPage', this)">Academics Report</button>
-      <button class="side-link" onclick="showPage('certificationsPage', this)">Certifications</button>
+      <div class="brand">
+        <div class="logo">H</div>
+        <div>
+          <strong>SKAPT</strong>
+          <small>Student Hub</small>
+        </div>
+      </div>
+      <button class="nav-link active" onclick="showPage('dashboardPage', this)">Dashboard</button>
+      <button class="nav-link" onclick="window.location.href='students_progress.html'">Student Progress</button>
+      <button class="nav-link" onclick="window.location.href='competition_report.html'">Competition Report</button>
+      <button class="nav-link" onclick="window.location.href='academics_report.html'">Academics Report</button>
+      <button class="nav-link" onclick="window.location.href='certifications.html'">Certifications</button>
+      <div class="sidebar-cta">
+        <strong>Need Guidance?</strong>
+        <p>Ask the performance desk for faster support.</p>
+        <a href="mailto:support@studenttool.com">Contact mentor</a>
+      </div>
     </aside>
 
-    <main class="main">
-    <div class="header">
-      <h2 id="welcomeText">Dashboard</h2>
-      <div class="header-actions">
-        <div class="notification-area">
-          <button id="notificationBellButton" class="notification-bell" type="button" onclick="toggleNotificationPanel()" aria-label="Notifications">
-            <span class="bell-icon">🔔</span>
-            <span id="notificationCount" class="notification-count"></span>
-          </button>
-          <div id="notificationPanel" class="notification-panel">
-            <div class="notification-panel-header">
-              <span>Notifications</span>
-              <button type="button" class="notification-clear" onclick="clearNotifications()">Clear All</button>
-            </div>
-            <div id="notificationList" class="notification-items"></div>
-          </div>
+    <div class="content">
+      <header class="top-bar">
+        <div class="title-block">
+          <p class="eyebrow">Student portal</p>
+          <h2 id="welcomeText">Dashboard</h2>
         </div>
-        <button onclick="logout()">Logout</button>
-      </div>
-    </div>
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="search" placeholder="Search insights, tests, or teachers" />
+        </div>
+        <div class="actions">
+          <div class="notification-area">
+            <button id="notificationBellButton" class="notification-bell" type="button" onclick="toggleNotificationPanel()" aria-label="Notifications">
+              <span class="bell-icon">🔔</span>
+              <span id="notificationCount" class="notification-count"></span>
+            </button>
+            <div id="notificationPanel" class="notification-panel">
+              <div class="notification-panel-header">
+                <span>Notifications</span>
+                <button type="button" class="notification-clear" onclick="clearNotifications()">Clear All</button>
+              </div>
+              <div id="notificationList" class="notification-items"></div>
+            </div>
+          </div>
+          <button type="button" class="pill" onclick="logout()">Logout</button>
+        </div>
+      </header>
 
       <section id="dashboardPage" class="page active">
         <div class="row">
@@ -245,7 +79,7 @@
         </div>
 
         <div class="row">
-          <div class="card" style="min-width:350px;max-width:48%;">
+          <div class="card">
             <h3>Result History</h3>
             <div class="table-wrap">
               <table id="historyTable">
@@ -254,7 +88,7 @@
               </table>
             </div>
           </div>
-          <div class="card" style="min-width:350px;max-width:48%;">
+          <div class="card">
             <h3>Performance Graph</h3>
             <div class="chart-wrap"><div class="chart-box"><canvas id="studentChart"></canvas></div></div>
           </div>
@@ -294,32 +128,15 @@
         </div>
       </section>
 
-      <section id="competitionPage" class="page">
-        <div class="row"><div class="card" style="width:100%;"><h3>Upload Competition Certificate</h3><p class="muted">If online certificate link is not given, PDF proof is mandatory. Geo-tag photo proof is mandatory.</p><div class="grid"><input id="compName" placeholder="Competition Name" /><input id="compDate" type="date" /><input id="compOnlineLink" type="url" placeholder="Online Certificate Link (optional)" /><input id="compPdfProof" type="file" accept="application/pdf" /><input id="compGeoPhotos" type="file" accept="image/*" multiple /><button onclick="saveCompetitionEntry()">Update Competition Record</button></div></div></div>
-        <div class="row"><div class="card" style="width:100%;"><h3>Competition Certificate History</h3><div class="table-wrap"><table id="competitionHistoryTable"><thead><tr><th>Competition Name</th><th>Date</th><th>Proofs</th><th>Geo Tag Photo Proofs</th><th>Online Link</th></tr></thead><tbody></tbody></table></div></div></div>
-      </section>
-
-      <section id="academicsPage" class="page">
-        <div class="row"><div class="card" style="width:100%;"><h3>Upload Academic Marksheet</h3><p class="muted">File name must be: <strong>rollno.semester-no marksheet.pdf</strong></p><div class="grid"><input id="semesterNo" type="number" min="1" placeholder="Semester Number" /><input id="marksheetPdf" type="file" accept="application/pdf" /><button onclick="saveMarksheetEntry()">Update Academic Record</button></div></div></div>
-        <div class="row"><div class="card" style="width:100%;"><h3>Academic Marksheet History</h3><div class="table-wrap"><table id="academicsHistoryTable"><thead><tr><th>Semester</th><th>File Name</th><th>PDF</th><th>Updated At</th></tr></thead><tbody></tbody></table></div></div></div>
-      </section>
-
-      <section id="certificationsPage" class="page">
-        <div class="row"><div class="card" style="width:100%;"><h3>Update Course Certifications</h3><p class="muted">Add certification name, optional link, and PDF proof.</p><div class="grid"><input id="certName" placeholder="Certification Name" /><input id="certLink" type="url" placeholder="Certification Link (optional)" /><input id="certPdf" type="file" accept="application/pdf" /><button onclick="saveCertificationEntry()">Update Certification</button></div></div></div>
-        <div class="row"><div class="card" style="width:100%;"><h3>Certification History</h3><div class="table-wrap"><table id="certificationHistoryTable"><thead><tr><th>Certification</th><th>Certificate Link</th><th>PDF</th><th>Updated At</th></tr></thead><tbody></tbody></table></div></div></div>
-      </section>
-    </main>
+    </div>
   </div>
 
   <script src="js/store.js"></script>
-<script src="js/api.js"></script>
+  <script src="js/api.js"></script>
 <script>
   let user = AppStore.getState().user || JSON.parse(localStorage.getItem("currentUser") || "null");
   let tests = [];
   let results = [];
-  let academicDocs = [];
-  let certificationDocs = [];
-  let competitionDocs = [];
 
   if (!user || user.role !== "student") window.location.href = "index.html";
 
@@ -398,20 +215,6 @@
     document.getElementById("testsContainer").innerHTML = tests.map(test => `<div class='test'><h4>${test.title}</h4><p>Time: ${test.duration || 30} mins</p><button onclick='startTest(${test.id})'>Start Test</button></div>`).join("");
   }
 
-  async function loadDocumentData() {
-    const [aRes, cRes, cpRes] = await Promise.all([
-      Api.getAcademicDocuments(),
-      Api.getCertificationDocuments(),
-      Api.getCompetitionDocuments()
-    ]);
-    academicDocs = aRes.documents || [];
-    certificationDocs = cRes.documents || [];
-    competitionDocs = cpRes.documents || [];
-    renderAcademicsHistory();
-    renderCertificationHistory();
-    renderCompetitionHistory();
-  }
-
   async function loadApiData() {
     try {
       const meRes = await Api.me();
@@ -426,7 +229,6 @@
       results = resultsRes.results || [];
       AppStore.setTests(tests);
       AppStore.setResults(results);
-      await loadDocumentData();
       renderScoreSections();
     } catch (err) {
       if ((err.message || "").toLowerCase().includes("token") || (err.message || "").toLowerCase().includes("authorization")) {
@@ -571,122 +373,6 @@
 
   function startTest(id) { localStorage.setItem("selectedTestId", id); window.location.href = "take_test.html"; }
   function logout() { AppStore.clearAuth(); window.location.href = "index.html"; }
-
-  function fileToDataUrl(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
-  async function saveCompetitionEntry() {
-    const competitionName = document.getElementById("compName").value.trim();
-    const competitionDate = document.getElementById("compDate").value;
-    const onlineLink = document.getElementById("compOnlineLink").value.trim();
-    const pdfFile = document.getElementById("compPdfProof").files[0];
-    const geoPhotoFiles = Array.from(document.getElementById("compGeoPhotos").files || []);
-
-    if (!competitionName || !competitionDate) { alert("Competition name and date are required."); return; }
-    if (!onlineLink && !pdfFile) { alert("Online certificate link or PDF proof is mandatory."); return; }
-    if (!geoPhotoFiles.length) { alert("Geo tag photo proof is mandatory."); return; }
-    if (pdfFile && pdfFile.type !== "application/pdf") { alert("Proof file must be a PDF."); return; }
-
-    const pdfProof = pdfFile ? { name: pdfFile.name, dataUrl: await fileToDataUrl(pdfFile) } : null;
-    const geoProofs = [];
-    for (const f of geoPhotoFiles) geoProofs.push({ name: f.name, dataUrl: await fileToDataUrl(f) });
-
-    try {
-      await Api.createCompetitionDocument({ competitionName, competitionDate, onlineLink, pdfProof, geoProofs });
-      document.getElementById("compName").value = "";
-      document.getElementById("compDate").value = "";
-      document.getElementById("compOnlineLink").value = "";
-      document.getElementById("compPdfProof").value = "";
-      document.getElementById("compGeoPhotos").value = "";
-      await loadDocumentData();
-      alert("Competition record updated.");
-    } catch (err) {
-      alert(err.message || "Failed to upload competition certificate");
-    }
-  }
-
-  function renderCompetitionHistory() {
-    const body = document.querySelector("#competitionHistoryTable tbody");
-    body.innerHTML = competitionDocs.length
-      ? competitionDocs.map(e => `<tr><td>${e.competitionName}</td><td>${e.competitionDate}</td><td>${e.pdfProof ? `<a href="${e.pdfProof.dataUrl}" download="${e.pdfProof.name}">Open PDF</a>` : '-'}</td><td>${(e.geoProofs || []).map((p,i)=>`<a target="_blank" href="${p.dataUrl}">Photo ${i+1}</a>`).join(' | ') || '-'}</td><td>${e.onlineLink ? `<a target="_blank" href="${e.onlineLink}">Open Link</a>` : '-'}</td></tr>`).join("")
-      : '<tr><td colspan="5">No competition certificates uploaded yet.</td></tr>';
-  }
-
-  async function saveMarksheetEntry() {
-    const semesterNo = Number(document.getElementById("semesterNo").value);
-    const marksheetFile = document.getElementById("marksheetPdf").files[0];
-    const rollNo = (user.studentProfile?.rollNo || user.studentProfile?.rollNumber || "").trim();
-
-    if (!semesterNo || semesterNo < 1) { alert("Enter valid semester number."); return; }
-    if (!rollNo) { alert("Student roll number not found in profile."); return; }
-    if (!marksheetFile) { alert("Choose marksheet PDF."); return; }
-    if (marksheetFile.type !== "application/pdf") { alert("Only PDF marksheets are allowed."); return; }
-
-    const expectedName = `${rollNo}.semester-${semesterNo} marksheet.pdf`;
-    if (marksheetFile.name.trim().toLowerCase() !== expectedName.toLowerCase()) {
-      alert(`File name should be: ${expectedName}`);
-      return;
-    }
-
-    try {
-      await Api.createAcademicDocument({
-        semesterNo,
-        fileName: marksheetFile.name,
-        pdfProof: { name: marksheetFile.name, dataUrl: await fileToDataUrl(marksheetFile) }
-      });
-      document.getElementById("semesterNo").value = "";
-      document.getElementById("marksheetPdf").value = "";
-      await loadDocumentData();
-      alert("Academic marksheet updated.");
-    } catch (err) {
-      alert(err.message || "Failed to upload marksheet");
-    }
-  }
-
-  function renderAcademicsHistory() {
-    const body = document.querySelector("#academicsHistoryTable tbody");
-    body.innerHTML = academicDocs.length
-      ? academicDocs.map(e => `<tr><td>${e.semesterNo}</td><td>${e.fileName}</td><td><a href="${e.pdfProof.dataUrl}" download="${e.pdfProof.name}">Open PDF</a></td><td>${new Date(e.updatedAt).toLocaleString()}</td></tr>`).join("")
-      : '<tr><td colspan="4">No academic marksheets uploaded yet.</td></tr>';
-  }
-
-  async function saveCertificationEntry() {
-    const certName = document.getElementById("certName").value.trim();
-    const certLink = document.getElementById("certLink").value.trim();
-    const certPdfFile = document.getElementById("certPdf").files[0];
-
-    if (!certName) { alert("Certification name is required."); return; }
-    if (!certPdfFile) { alert("Certification PDF is required."); return; }
-    if (certPdfFile.type !== "application/pdf") { alert("Only PDF files are allowed."); return; }
-
-    try {
-      await Api.createCertificationDocument({
-        certName,
-        certLink,
-        pdfProof: { name: certPdfFile.name, dataUrl: await fileToDataUrl(certPdfFile) }
-      });
-      document.getElementById("certName").value = "";
-      document.getElementById("certLink").value = "";
-      document.getElementById("certPdf").value = "";
-      await loadDocumentData();
-      alert("Certification updated.");
-    } catch (err) {
-      alert(err.message || "Failed to upload certification");
-    }
-  }
-
-  function renderCertificationHistory() {
-    const body = document.querySelector("#certificationHistoryTable tbody");
-    body.innerHTML = certificationDocs.length
-      ? certificationDocs.map(e => `<tr><td>${e.certName}</td><td>${e.certLink ? `<a target="_blank" href="${e.certLink}">Open Link</a>` : '-'}</td><td><a href="${e.pdfProof.dataUrl}" download="${e.pdfProof.name}">Open PDF</a></td><td>${new Date(e.updatedAt).toLocaleString()}</td></tr>`).join("")
-      : '<tr><td colspan="4">No certifications uploaded yet.</td></tr>';
-  }
 
   renderRequestsTable();
   renderTeacherNotifyTargets();

@@ -3,18 +3,29 @@ package com.skapt.app.servlet;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.skapt.app.config.Db;
 import com.skapt.app.util.JsonUtil;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+@WebServlet("/api/documents/*")
+@MultipartConfig(
+    fileSizeThreshold = 1024 * 1024, // 1MB
+    maxFileSize = 10 * 1024 * 1024, // 10MB
+    maxRequestSize = 15 * 1024 * 1024 // 15MB
+)
 
 @WebServlet("/api/documents/*")
 public class DocumentsServlet extends BaseServlet {
@@ -60,17 +71,21 @@ public class DocumentsServlet extends BaseServlet {
             }
 
             long studentId = (Long) req.getAttribute("userId");
-            Map<String, Object> payload = JsonUtil.fromJson(body(req), new TypeReference<>() {});
 
-            if ("academics".equals(type)) {
-                createAcademic(studentId, payload, res);
-                return;
+            if (req.getContentType() != null && req.getContentType().startsWith("multipart/form-data")) {
+                handleMultipartUpload(req, res, type, studentId);
+            } else {
+                Map<String, Object> payload = JsonUtil.fromJson(body(req), new TypeReference<>() {});
+                if ("academics".equals(type)) {
+                    createAcademic(studentId, payload, res);
+                    return;
+                }
+                if ("certifications".equals(type)) {
+                    createCertification(studentId, payload, res);
+                    return;
+                }
+                createCompetition(studentId, payload, res);
             }
-            if ("certifications".equals(type)) {
-                createCertification(studentId, payload, res);
-                return;
-            }
-            createCompetition(studentId, payload, res);
         } catch (Exception ex) {
             logException("Document POST failed", ex);
             try { error(res, HttpServletResponse.SC_BAD_REQUEST, ex.getMessage()); } catch (Exception ignored) {}
@@ -88,7 +103,7 @@ public class DocumentsServlet extends BaseServlet {
             while (rs.next()) {
                 Map<String, Object> row = new HashMap<>();
                 row.put("id", rs.getLong("id"));
-                row.put("semesterNo", rs.getInt("semester_no"));
+                row.put("semester", rs.getInt("semester_no"));
                 row.put("fileName", rs.getString("file_name"));
                 row.put("pdfProof", Map.of(
                     "name", rs.getString("pdf_name"),
@@ -284,14 +299,82 @@ public class DocumentsServlet extends BaseServlet {
         }
     }
 
-    private String normalizedType(HttpServletRequest req) {
-        String path = req.getPathInfo();
-        if (path == null) return null;
-        String type = path.replace("/", "").trim().toLowerCase();
-        if ("academics".equals(type) || "certifications".equals(type) || "competition".equals(type)) {
-            return type;
+    private void handleMultipartUpload(HttpServletRequest req, HttpServletResponse res, String type, long studentId) throws Exception {
+        if ("academics".equals(type)) {
+            String semesterNoStr = req.getParameter("semesterNo");
+            var filePart = req.getPart("file");
+            if (semesterNoStr == null || filePart == null) {
+                error(res, HttpServletResponse.SC_BAD_REQUEST, "semesterNo and file are required");
+                return;
+            }
+            int semesterNo = Integer.parseInt(semesterNoStr);
+            String rollNo = findRollNo(studentId);
+            if (rollNo.isBlank()) {
+                error(res, HttpServletResponse.SC_BAD_REQUEST, "Student roll number not found");
+                return;
+            }
+            String expectedFileName = rollNo + ".semester-" + semesterNo + " marksheet.pdf";
+            String base64 = "data:application/pdf;base64," + Base64.getEncoder().encodeToString(filePart.getInputStream().readAllBytes());
+
+            Map<String, Object> payload = Map.of(
+                "semesterNo", semesterNo,
+                "fileName", expectedFileName,
+                "pdfProof", Map.of("name", expectedFileName, "dataUrl", base64)
+            );
+            createAcademic(studentId, payload, res);
+        } else if ("certifications".equals(type)) {
+            String certName = req.getParameter("certName");
+            String certLink = req.getParameter("certLink");
+            var filePart = req.getPart("file");
+            if (certName == null || filePart == null) {
+                error(res, HttpServletResponse.SC_BAD_REQUEST, "certName and file are required");
+                return;
+            }
+            String fileName = filePart.getSubmittedFileName();
+            String base64 = "data:application/pdf;base64," + Base64.getEncoder().encodeToString(filePart.getInputStream().readAllBytes());
+
+            Map<String, Object> payload = Map.of(
+                "certName", certName,
+                "certLink", certLink,
+                "pdfProof", Map.of("name", fileName, "dataUrl", base64)
+            );
+            createCertification(studentId, payload, res);
+        } else if ("competition".equals(type)) {
+            String competitionName = req.getParameter("competitionName");
+            String competitionDate = req.getParameter("competitionDate");
+            String onlineLink = req.getParameter("onlineLink");
+            var pdfPart = req.getPart("pdfFile");
+            var geoParts = req.getParts().stream().filter(p -> p.getName().startsWith("geoFile")).toList();
+
+            if (competitionName == null || competitionDate == null) {
+                error(res, HttpServletResponse.SC_BAD_REQUEST, "competitionName and competitionDate are required");
+                return;
+            }
+
+            Map<String, Object> pdfProof = null;
+            if (pdfPart != null) {
+                String fileName = pdfPart.getSubmittedFileName();
+                String base64 = "data:application/pdf;base64," + Base64.getEncoder().encodeToString(pdfPart.getInputStream().readAllBytes());
+                pdfProof = Map.of("name", fileName, "dataUrl", base64);
+            }
+
+            List<Map<String, Object>> geoProofs = new ArrayList<>();
+            for (var geoPart : geoParts) {
+                String geoFileName = geoPart.getSubmittedFileName();
+                String geoBase64 = "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(geoPart.getInputStream().readAllBytes());
+                geoProofs.add(Map.of("name", geoFileName, "dataUrl", geoBase64));
+            }
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("competitionName", competitionName);
+            payload.put("competitionDate", competitionDate);
+            payload.put("onlineLink", onlineLink);
+            if (pdfProof != null) payload.put("pdfProof", pdfProof);
+            payload.put("geoProofs", geoProofs);
+            createCompetition(studentId, payload, res);
+        } else {
+            error(res, HttpServletResponse.SC_NOT_FOUND, "Unsupported type for multipart upload");
         }
-        return null;
     }
 
     private String trim(Object v) {
