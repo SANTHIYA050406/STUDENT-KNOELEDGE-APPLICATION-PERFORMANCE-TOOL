@@ -1,0 +1,10 @@
+**/.git
+**/.gitignore
+**/.vscode
+**/.idea
+**/target
+**/node_modules
+**/*.log
+**/*.tmp
+**/*.DS_Store
+postman/*.docx

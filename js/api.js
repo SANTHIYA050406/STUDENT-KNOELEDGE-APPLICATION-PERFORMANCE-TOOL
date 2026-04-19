@@ -1,6 +1,8 @@
-// On some Windows setups, `localhost` may resolve to IPv6 (::1) while Jetty is bound to IPv4,
-// which makes `fetch()` fail with a network error ("Failed to fetch"). Use IPv4 loopback.
-const API_BASE = "http://127.0.0.1:8080/api";
+// Production (Railway): frontend + backend are served from the same origin, so use a relative `/api`.
+// Local dev: keep the explicit Jetty URL to avoid cross-port issues when using a separate static server.
+const API_BASE = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+  ? "http://127.0.0.1:8080/api"
+  : "/api";
 
 function authHeaders() {
     const token = localStorage.getItem("token");
