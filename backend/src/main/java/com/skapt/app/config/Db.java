@@ -6,6 +6,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import javax.sql.DataSource;
 import java.net.URI;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 public final class Db {
@@ -167,6 +168,7 @@ public final class Db {
                 student_name VARCHAR(100),
                 roll_no VARCHAR(50),
                 department VARCHAR(100),
+                year_of_study INT,
                 cgpa DOUBLE,
                 teacher_name VARCHAR(100),
                 faculty_id VARCHAR(100),
@@ -244,6 +246,9 @@ public final class Db {
 
         try (Connection conn = getConnection(); Statement st = conn.createStatement()) {
             st.execute(users);
+            // If the users table already existed from an earlier version, add missing columns.
+            // (CREATE TABLE IF NOT EXISTS does not update existing schemas.)
+            addColumnIfMissing(st, "users", "year_of_study", "INT");
             st.execute(tests);
             st.execute(results);
             st.execute(academicMarksheets);
@@ -251,6 +256,18 @@ public final class Db {
             st.execute(competitionCertificates);
         } catch (Exception ex) {
             throw new RuntimeException("Schema initialization failed", ex);
+        }
+    }
+
+    private static void addColumnIfMissing(Statement st, String table, String column, String ddlType) throws Exception {
+        try {
+            st.execute("ALTER TABLE " + table + " ADD COLUMN " + column + " " + ddlType);
+        } catch (SQLException ex) {
+            // MySQL duplicate column error code.
+            if (ex.getErrorCode() == 1060) return;
+            String msg = ex.getMessage();
+            if (msg != null && msg.toLowerCase().contains("duplicate column")) return;
+            throw ex;
         }
     }
 }
