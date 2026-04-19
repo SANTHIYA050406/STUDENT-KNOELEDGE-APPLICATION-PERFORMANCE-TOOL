@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teacher Dashboard</title>
+  <link rel="stylesheet" href="css/hcare.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">H</div>
+        <div>
+          <strong>SKAPT</strong>
+          <small>Teacher Hub</small>
+        </div>
+      </div>
+      <nav>
+        <button class="nav-link active" onclick="window.location.href='admin_dashboard.html'">Dashboard</button>
+        <button class="nav-link" onclick="window.location.href='teacher_groups.html'">My Groups</button>
+        <button class="nav-link" onclick="window.location.href='create_test.html'">Create Test</button>
+      </nav>
+      <div class="sidebar-cta">
+        <strong>Need Guidance?</strong>
+        <p>Connect with support for group and test help.</p>
+        <a href="mailto:support@studenttool.com">Contact mentor</a>
+      </div>
+    </aside>
+
+    <div class="content">
+      <header class="top-bar">
+        <div class="title-block">
+          <p class="eyebrow">Teacher portal</p>
+          <h2 id="welcomeText">Teacher Dashboard</h2>
+        </div>
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="search" placeholder="Search students, tests, or groups" />
+        </div>
+        <div class="actions">
+          <div class="notification-area">
+            <button id="notificationBellButton" class="notification-bell" type="button" onclick="toggleNotificationPanel()" aria-label="Notifications">
+              <span class="bell-icon">🔔</span>
+              <span id="notificationCount" class="notification-count"></span>
+            </button>
+            <div id="notificationPanel" class="notification-panel">
+              <div class="notification-panel-header">
+                <span>Notifications</span>
+                <button type="button" class="notification-clear" onclick="clearNotifications()">Clear All</button>
+              </div>
+              <div id="notificationList" class="notification-items"></div>
+            </div>
+          </div>
+          <button type="button" class="pill" onclick="logout()">Logout</button>
+        </div>
+      </header>
+
+      <div class="container">
+        <div class="row">
+          <div class="card"><h3>Total Tests Created</h3><p id="totalTestsCreated">0</p></div>
+          <div class="card"><h3>Total Tests Attempted</h3><p id="totalTestsAttempted">0</p></div>
+          <div class="card"><h3>Connected Students</h3><p id="connectedStudents">0</p></div>
+        </div>
+
+        <div class="row" id="teacherProfileRow" style="display:none;">
+          <div class="card" style="width:100%;">
+            <h3>Teacher Basic Details</h3>
+            <p id="teacherProfileText">-</p>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Pending Requests</h3>
+            <div class="table-wrap">
+              <table id="pendingRequestsTable">
+                <thead><tr><th>Student</th><th>Roll No</th><th>Group</th><th>Status</th><th>Requested On</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Manage My Groups</h3>
+            <p class="muted">Group management now lives on a focused page. Use the “My Groups” link in the header to open it.</p>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Student Feedback</h3>
+            <p class="muted">Send one-line feedback to connected students.</p>
+            <div class="grid">
+              <select id="feedbackStudentSelect"></select>
+              <select id="feedbackTemplate">
+                <option value="excellent.keep going">excellent.keep going</option>
+                <option value="good">good</option>
+                <option value="needs improvement">needs improvement</option>
+              </select>
+              <button onclick="sendFeedbackToStudent()">Send Feedback</button>
+            </div>
+            <h4>Feedback Sent</h4>
+            <div class="table-wrap">
+              <table id="teacherFeedbackTable">
+                <thead><tr><th>Student</th><th>Feedback</th><th>Time</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Notifications</h3>
+            <p class="muted">Send a quick message to an accepted student; view replies through the bell above.</p>
+            <div class="grid">
+              <select id="notifyStudentSelect"></select>
+              <textarea id="teacherNotificationMsg" placeholder="Type notification for selected student"></textarea>
+              <button onclick="sendNotificationToStudent()">Send Notification</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Students Results (Accepted Students)</h3>
+            <div class="table-wrap">
+              <table id="studentsResultsTable">
+                <thead><tr><th>Student</th><th>Test</th><th>Score</th><th>Date</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/store.js"></script>
+<script src="js/api.js"></script>
+<script>
+  let user = AppStore.getState().user || JSON.parse(localStorage.getItem("currentUser") || "null");
+  let tests = [];
+  let results = [];
+  let students = [];
+
+  if (!user || (user.role !== "teacher" && user.role !== "admin")) {
+    window.location.href = "index.html";
+  }
+
+  function studentByUsername(username) {
+    return students.find(s => s.username === username) || null;
+  }
+
+  function renderHeaderDetails() {
+    document.getElementById("welcomeText").innerText = `Welcome, ${user.teacherProfile?.name || user.username} (Teacher)`;
+    if (user.teacherProfile) {
+      document.getElementById("teacherProfileRow").style.display = "flex";
+      document.getElementById("teacherProfileText").innerText =
+        `Name: ${user.teacherProfile.name} | Faculty ID: ${user.teacherProfile.facultyId} | Department: ${user.teacherProfile.department}`;
+    }
+  }
+
+  function getTeacherRequests() {
+    const all = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
+    return all.filter(r => String(r.teacherId) === String(user.id) || r.teacherUsername === user.username);
+  }
+
+  function getAcceptedRequests() {
+    return getTeacherRequests().filter(r => r.status === "accepted");
+  }
+
+  function getTeacherGroups() {
+    const allGroups = JSON.parse(localStorage.getItem("teacherGroupsData") || "[]");
+    return allGroups.filter(g => String(g.teacherId) === String(user.id) || g.teacherUsername === user.username);
+  }
+
+  function findStudentRecord(identifier) {
+    const needle = (identifier || "").trim().toLowerCase();
+    if (!needle) return null;
+    return students.find(s => {
+      const username = (s.username || "").trim().toLowerCase();
+      const rollNo = (s.studentProfile?.rollNo || "").trim().toLowerCase();
+      return username === needle || rollNo === needle;
+    }) || null;
+  }
+
+  function getConnectedStudents() {
+    const entries = new Map();
+
+    function upsert(candidate) {
+      if (!candidate) return;
+      const username = (candidate.username || "").trim();
+      const rollNo = (candidate.rollNo || "").trim();
+      const key = (username || rollNo).toLowerCase();
+      if (!key) return;
+
+      const existing = entries.get(key) || {};
+      entries.set(key, {
+        key,
+        username: username || existing.username || "",
+        rollNo: rollNo || existing.rollNo || "",
+        name: candidate.name || existing.name || "",
+        studentId: candidate.studentId || existing.studentId || ""
+      });
+    }
+
+    getAcceptedRequests().forEach(req => {
+      const matched = findStudentRecord(req.studentUsername || req.studentRollNo);
+      upsert({
+        username: matched?.username || req.studentUsername || "",
+        rollNo: matched?.studentProfile?.rollNo || req.studentRollNo || "",
+        name: matched?.studentProfile?.name || req.studentName || "",
+        studentId: matched?.id || req.studentId || ""
+      });
+    });
+
+    getTeacherGroups().forEach(group => {
+      (group.members || []).forEach(member => {
+        const matched = findStudentRecord(member);
+        upsert({
+          username: matched?.username || member || "",
+          rollNo: matched?.studentProfile?.rollNo || "",
+          name: matched?.studentProfile?.name || "",
+          studentId: matched?.id || ""
+        });
+      });
+    });
+
+    return Array.from(entries.values()).filter(student => student.username || student.rollNo);
+  }
+
+  function refreshDashboard() {
+    const teacherRequests = getTeacherRequests();
+    const accepted = getAcceptedRequests();
+    const connectedStudents = getConnectedStudents();
+    const connectedUsernames = connectedStudents.map(s => s.username).filter(Boolean);
+
+    const myTests = tests.filter(t => Number(t.createdBy) === Number(user.id) || user.role === "admin");
+    const myTestIds = new Set(myTests.map(t => Number(t.id)));
+
+    document.getElementById("totalTestsCreated").innerText = myTests.length;
+    document.getElementById("totalTestsAttempted").innerText = results.filter(r => myTestIds.has(Number(r.testId))).length;
+    document.getElementById("connectedStudents").innerText = connectedUsernames.length;
+
+    const pendingBody = document.querySelector("#pendingRequestsTable tbody");
+    pendingBody.innerHTML = teacherRequests.length
+      ? teacherRequests.sort((a, b) => b.id - a.id).map(r => `<tr><td>${r.studentName || r.studentUsername}</td><td>${r.studentRollNo || '-'}</td><td>${r.groupName || 'General'}</td><td>${r.status}</td><td>${r.requestedAt || '-'}</td></tr>`).join("")
+      : '<tr><td colspan="5">No requests yet.</td></tr>';
+
+    renderGroups(accepted);
+    renderSelectors(connectedStudents);
+    renderResults(connectedUsernames);
+    renderFeedbackSentTable();
+    renderNotificationPanel();
+  }
+
+  function renderGroups(accepted) {
+    const container = document.getElementById("teacherGroupsContainer");
+    if (!container) return;
+
+    const byGroup = {};
+    accepted.forEach(r => {
+      const group = r.groupName || "General";
+      if (!byGroup[group]) byGroup[group] = [];
+      byGroup[group].push(r);
+    });
+
+    const groups = Object.keys(byGroup);
+    if (!groups.length) {
+      container.innerHTML = '<p class="muted">No accepted students in groups.</p>';
+      return;
+    }
+
+    container.innerHTML = groups.map(group => {
+      const studentsHtml = byGroup[group].map(r => {
+        const stu = studentByUsername(r.studentUsername);
+        const p = stu?.studentProfile || {};
+        return `<div class="student"><strong>${p.name || r.studentName || r.studentUsername}</strong> <a class="link" href="#" onclick="openStudentDetails('${r.studentUsername}');return false;">Student Detail</a><br>Roll No: ${p.rollNo || r.studentRollNo || '-'} | Department: ${p.department || '-'} | CGPA: ${p.cgpa ?? '-'}<div style="margin-top:8px;"><button class="danger" onclick="removeStudentFromGroup('${r.studentUsername}','${group}')">Remove Student</button></div></div>`;
+      }).join("");
+
+      return `<h4 class="group-title">Group: ${group} <button class="danger" onclick="removeGroup('${group}')">Remove Group</button></h4>${studentsHtml}`;
+    }).join("");
+  }
+
+  function renderSelectors(connectedStudents) {
+    const options = connectedStudents.length
+      ? connectedStudents.map(student => {
+          const value = student.username || student.rollNo;
+          const name = student.name || student.username || student.rollNo;
+          const meta = student.username && student.rollNo
+            ? `${student.username} / ${student.rollNo}`
+            : (student.username || student.rollNo || "");
+          return `<option value="${value}">${name}${meta ? ` (${meta})` : ""}</option>`;
+        }).join("")
+      : '<option value="">No accepted students</option>';
+
+    document.getElementById("notifyStudentSelect").innerHTML = options;
+    document.getElementById("feedbackStudentSelect").innerHTML = options;
+  }
+
+  function renderResults(acceptedUsernames) {
+    const body = document.querySelector("#studentsResultsTable tbody");
+    const visible = results.filter(r => acceptedUsernames.includes(r.studentUsername));
+    body.innerHTML = visible.length
+      ? visible.map(r => {
+          const t = tests.find(x => Number(x.id) === Number(r.testId));
+          const dateText = r.submittedAt ? new Date(r.submittedAt).toLocaleDateString() : "-";
+          return `<tr><td>${r.studentUsername}</td><td>${t ? t.title : (r.testTitle || 'Unknown')}</td><td>${r.score}%</td><td>${dateText}</td></tr>`;
+        }).join("")
+      : '<tr><td colspan="4">No results from accepted students.</td></tr>';
+  }
+
+  function removeStudentFromGroup(studentUsername, groupName) {
+    const reqs = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
+    reqs.forEach(r => {
+      if ((String(r.teacherId) === String(user.id) || r.teacherUsername === user.username) && r.studentUsername === studentUsername && (r.groupName || "General") === groupName && r.status === "accepted") {
+        r.status = "removed_by_teacher";
+        r.removedAt = new Date().toLocaleString();
+      }
+    });
+    localStorage.setItem("studentGroupRequests", JSON.stringify(reqs));
+    refreshDashboard();
+  }
+
+  function removeGroup(groupName) {
+    const reqs = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
+    reqs.forEach(r => {
+      if ((String(r.teacherId) === String(user.id) || r.teacherUsername === user.username) && (r.groupName || "General") === groupName && ["pending", "accepted"].includes(r.status)) {
+        r.status = "removed_by_teacher";
+        r.removedAt = new Date().toLocaleString();
+      }
+    });
+    localStorage.setItem("studentGroupRequests", JSON.stringify(reqs));
+    refreshDashboard();
+  }
+
+  function sendNotificationToStudent() {
+    const selectedValue = document.getElementById("notifyStudentSelect").value;
+    const matchedStudent = findStudentRecord(selectedValue);
+    const toUsername = matchedStudent?.username || selectedValue;
+    const message = document.getElementById("teacherNotificationMsg").value.trim();
+    if (!toUsername) { alert("No connected student selected."); return; }
+    if (!message) { alert("Notification message is required."); return; }
+
+    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+    notes.push({ id: Date.now(), fromUsername: user.username, fromRole: "teacher", toUsername, toRole: "student", message, createdAt: new Date().toLocaleString(), read: false });
+    localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
+    document.getElementById("teacherNotificationMsg").value = "";
+    alert("Notification sent.");
+  }
+
+  function sendFeedbackToStudent() {
+    const selectedValue = document.getElementById("feedbackStudentSelect").value;
+    const matchedStudent = findStudentRecord(selectedValue);
+    const toUsername = matchedStudent?.username || selectedValue;
+    const message = document.getElementById("feedbackTemplate").value;
+    if (!toUsername) { alert("No connected student selected."); return; }
+
+    const student = matchedStudent || studentByUsername(toUsername);
+    const toName = student?.studentProfile?.name || toUsername;
+    const feedbacks = JSON.parse(localStorage.getItem("studentFeedbackMessages")) || [];
+    feedbacks.push({ id: Date.now(), fromUsername: user.username, fromRole: "teacher", toUsername, toName, message, createdAt: new Date().toLocaleString() });
+    localStorage.setItem("studentFeedbackMessages", JSON.stringify(feedbacks));
+    renderFeedbackSentTable();
+    alert("Feedback sent.");
+  }
+
+  function renderFeedbackSentTable() {
+    const feedbacks = JSON.parse(localStorage.getItem("studentFeedbackMessages")) || [];
+    const mine = feedbacks.filter(f => f.fromUsername === user.username).sort((a, b) => b.id - a.id);
+    const body = document.querySelector("#teacherFeedbackTable tbody");
+    body.innerHTML = mine.length
+      ? mine.map(f => {
+          const student = studentByUsername(f.toUsername);
+          const displayName = f.toName || student?.studentProfile?.name || f.toUsername;
+          return `<tr><td>${displayName}</td><td>${f.message}</td><td>${f.createdAt}</td></tr>`;
+        }).join("")
+      : '<tr><td colspan="3">No feedback sent yet.</td></tr>';
+  }
+
+  function getMyNotifications() {
+    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+    return notes
+      .filter(n => n.toUsername === user.username && !n.read)
+      .sort((a, b) => b.id - a.id);
+  }
+
+  function renderNotificationPanel() {
+    const panel = document.getElementById("notificationPanel");
+    const listEl = document.getElementById("notificationList");
+    const countEl = document.getElementById("notificationCount");
+    if (!panel || !listEl || !countEl) return;
+    const notifications = getMyNotifications();
+    if (!notifications.length) {
+      listEl.innerHTML = '<p class="muted" style="padding:12px 16px;">No notifications yet.</p>';
+      countEl.style.display = "none";
+    } else {
+      countEl.innerText = notifications.length;
+      countEl.style.display = "inline";
+      listEl.innerHTML = notifications.map(n => `
+        <div class="notification-item">
+          <div class="notification-header">
+            <strong>${n.fromUsername} (${n.fromRole})</strong>
+            <div class="notification-actions">
+              <button type="button" class="ghost-action small-action" onclick="markNotificationAsRead(${n.id})" aria-label="Mark notification read">✔</button>
+            </div>
+          </div>
+          <div>${n.message}</div>
+          <span>${n.createdAt || ""}</span>
+        </div>
+      `).join("");
+    }
+  }
+
+  function toggleNotificationPanel() {
+    const panel = document.getElementById("notificationPanel");
+    if (!panel) return;
+    panel.classList.toggle("open");
+    renderNotificationPanel();
+  }
+
+  function markNotificationAsRead(id) {
+    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+    let changed = false;
+    for (const note of notes) {
+      if (note.id === id && !note.read) {
+        note.read = true;
+        changed = true;
+        break;
+      }
+    }
+    if (changed) {
+      localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
+    }
+    renderNotificationPanel();
+  }
+
+  function clearNotifications() {
+    const remaining = (JSON.parse(localStorage.getItem("dashboardNotifications")) || [])
+      .filter(n => n.toUsername !== user.username);
+    localStorage.setItem("dashboardNotifications", JSON.stringify(remaining));
+    renderNotificationPanel();
+  }
+
+  document.addEventListener("click", event => {
+    const panel = document.getElementById("notificationPanel");
+    const bell = document.getElementById("notificationBellButton");
+    if (!panel || !bell) return;
+    if (!panel.contains(event.target) && !bell.contains(event.target)) {
+      panel.classList.remove("open");
+    }
+  });
+
+  window.addEventListener("storage", event => {
+    if (event.key === "dashboardNotifications") {
+      renderNotificationPanel();
+    }
+    if (event.key === "studentGroupRequests" || event.key === "teacherGroupsData") {
+      refreshDashboard();
+    }
+  });
+
+  function openStudentDetails(studentUsername) {
+    const acceptedUsernames = [...new Set(getAcceptedRequests().map(r => r.studentUsername))];
+    if (!acceptedUsernames.includes(studentUsername)) {
+      alert("This student is not in your accepted group.");
+      return;
+    }
+    localStorage.setItem("selectedStudentForTeacherView", studentUsername);
+    window.location.href = "student_detail.html";
+  }
+
+  async function loadApiData() {
+    try {
+      const meRes = await Api.me();
+      if (meRes?.user) {
+        user = meRes.user;
+        AppStore.setAuth(user, localStorage.getItem("token"));
+      }
+
+      const [testsRes, resultsRes, studentsRes] = await Promise.all([Api.getTests(), Api.getResults(), Api.getStudents()]);
+      tests = testsRes.tests || [];
+      results = resultsRes.results || [];
+      students = studentsRes.students || [];
+      AppStore.setTests(tests);
+      AppStore.setResults(results);
+    } catch (err) {
+      if ((err.message || "").toLowerCase().includes("token") || (err.message || "").toLowerCase().includes("authorization")) {
+        AppStore.clearAuth();
+        window.location.href = "index.html";
+        return;
+      }
+      alert(err.message || "Failed to load dashboard data");
+    }
+  }
+
+  function logout() {
+    AppStore.clearAuth();
+    window.location.href = "index.html";
+  }
+
+  (async function init() {
+    renderHeaderDetails();
+    await loadApiData();
+    renderHeaderDetails();
+    refreshDashboard();
+  })();
+</script>
+</body>
+</html>
+
+
+

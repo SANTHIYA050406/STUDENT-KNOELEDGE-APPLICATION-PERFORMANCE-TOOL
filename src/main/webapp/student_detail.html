@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Detail</title>
+  <link rel="stylesheet" href="css/hcare.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">H</div>
+        <div>
+          <strong>SKAPT</strong>
+          <small>Mentor Desk</small>
+        </div>
+      </div>
+      <nav>
+        <button class="nav-link" onclick="window.location.href='admin_dashboard.html'">Dashboard</button>
+        <button class="nav-link" onclick="window.location.href='teacher_groups.html'">Teacher Groups</button>
+        <button class="nav-link" onclick="window.location.href='create_test.html'">Create Test</button>
+        <button class="nav-link active" onclick="window.location.href='student_detail.html'">Student Detail</button>
+        <button class="nav-link" onclick="window.location.href='take_test.html'">Take Test</button>
+      </nav>
+      <div class="sidebar-cta">
+        <strong>Insight</strong>
+        <p>Review uploaded documents and certificates in one place.</p>
+        <a href="mailto:support@studenttool.com">Contact support</a>
+      </div>
+    </aside>
+
+    <div class="content">
+      <header class="top-bar">
+        <div class="title-block">
+          <p class="eyebrow">Mentor portal</p>
+          <h2 id="titleText">Student Detail</h2>
+        </div>
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="search" placeholder="Search students, documents, or achievements" />
+        </div>
+        <div class="actions">
+          <button type="button" class="pill" onclick="goBack()">Back</button>
+        </div>
+      </header>
+
+      <div class="container">
+    <div class="card">
+      <h3>Student Profile</h3>
+      <p id="profileText" class="muted">Loading...</p>
+    </div>
+
+    <div class="card">
+      <h3>Academic PDFs</h3>
+      <div class="table-wrap"><table id="academicTable"><thead><tr><th>Semester</th><th>File</th><th>PDF</th><th>Updated At</th><th>Status</th><th>Action</th></tr></thead><tbody></tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h3>Course Certifications</h3>
+      <div class="table-wrap"><table id="certTable"><thead><tr><th>Certification</th><th>Link</th><th>PDF</th><th>Updated At</th><th>Status</th><th>Action</th></tr></thead><tbody></tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h3>Competition Certifications</h3>
+      <div class="table-wrap"><table id="competitionTable"><thead><tr><th>Competition</th><th>Date</th><th>PDF</th><th>Geo Photos</th><th>Link</th><th>Status</th><th>Action</th></tr></thead><tbody></tbody></table></div>
+    </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/store.js"></script>
+  <script src="js/api.js"></script>
+<script>
+  let teacher = AppStore.getState().user || JSON.parse(localStorage.getItem("currentUser") || "null");
+  const selectedStudentUsername = localStorage.getItem("selectedStudentForTeacherView");
+
+  if (!teacher || (teacher.role !== "teacher" && teacher.role !== "admin")) {
+    window.location.href = "index.html";
+  }
+  if (!selectedStudentUsername) {
+    window.location.href = "admin_dashboard.html";
+  }
+
+  const requests = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
+  const hasAccess = requests.some(r =>
+    (String(r.teacherId) === String(teacher.id) || r.teacherUsername === teacher.username) &&
+    r.studentUsername === selectedStudentUsername &&
+    r.status === "accepted"
+  );
+
+  if (!hasAccess) {
+    alert("You do not have access to this student details.");
+    window.location.href = "admin_dashboard.html";
+  }
+
+  function fillTable(selector, rowsHtml, colspan, emptyMessage) {
+    const body = document.querySelector(selector);
+    body.innerHTML = rowsHtml || `<tr><td colspan="${colspan}">${emptyMessage}</td></tr>`;
+  }
+
+  function humanStatus(s) {
+    const v = String(s || "pending").toLowerCase();
+    if (v === "approved") return "Approved";
+    if (v === "rejected") return "Declined";
+    return "Pending";
+  }
+
+  async function setReview(type, id, status) {
+    try {
+      await Api.reviewDocument(type, id, status);
+      await renderFromApi();
+    } catch (err) {
+      alert("Failed to update review: " + (err.message || err));
+    }
+  }
+
+  async function renderFromApi() {
+    try {
+      const meRes = await Api.me();
+      if (meRes?.user) {
+        teacher = meRes.user;
+        AppStore.setAuth(teacher, localStorage.getItem("token"));
+      }
+
+      const [studentsRes, academicsRes, certsRes, compsRes] = await Promise.all([
+        Api.getStudents(),
+        Api.getAcademicDocuments(selectedStudentUsername),
+        Api.getCertificationDocuments(selectedStudentUsername),
+        Api.getCompetitionDocuments(selectedStudentUsername)
+      ]);
+
+      const student = (studentsRes.students || []).find(u => u.username === selectedStudentUsername);
+      const profile = student?.studentProfile || {};
+
+      document.getElementById("titleText").innerText = `Student Detail - ${profile.name || selectedStudentUsername}`;
+      document.getElementById("profileText").innerText = `Name: ${profile.name || selectedStudentUsername} | Roll No: ${profile.rollNo || '-'} | Department: ${profile.department || '-'} | Year of Study: ${profile.yearOfStudy ?? '-'} | CGPA: ${profile.cgpa ?? '-'}`;
+
+      const academics = academicsRes.documents || [];
+      const academicRows = academics.map(e => {
+        let pdfLink = '-';
+        if (e.pdfProof?.dataUrl) {
+          const blob = dataUrlToBlob(e.pdfProof.dataUrl);
+          const blobUrl = URL.createObjectURL(blob);
+          pdfLink = `<a class="link" href="${blobUrl}" download="${e.pdfProof.name}">Open PDF</a>`;
+        }
+        const status = humanStatus(e.reviewStatus);
+        const actions = `
+          <button type="button" class="pill" onclick="setReview('academics', ${Number(e.id)}, 'approved')">Approve</button>
+          <button type="button" class="pill" onclick="setReview('academics', ${Number(e.id)}, 'rejected')">Decline</button>
+        `;
+        return `<tr><td>${e.semesterNo ?? e.semester ?? '-'}</td><td>${e.fileName || '-'}</td><td>${pdfLink}</td><td>${e.updatedAt ? new Date(e.updatedAt).toLocaleString() : '-'}</td><td>${status}</td><td>${actions}</td></tr>`;
+      }).join("");
+      fillTable("#academicTable tbody", academicRows, 6, "No academic PDFs.");
+
+      const certs = certsRes.documents || [];
+      const certRows = certs.map(e => {
+        let pdfLink = '-';
+        if (e.pdfProof?.dataUrl) {
+          const blob = dataUrlToBlob(e.pdfProof.dataUrl);
+          const blobUrl = URL.createObjectURL(blob);
+          pdfLink = `<a class="link" href="${blobUrl}" download="${e.pdfProof.name}">Open PDF</a>`;
+        }
+        const status = humanStatus(e.reviewStatus);
+        const actions = `
+          <button type="button" class="pill" onclick="setReview('certifications', ${Number(e.id)}, 'approved')">Approve</button>
+          <button type="button" class="pill" onclick="setReview('certifications', ${Number(e.id)}, 'rejected')">Decline</button>
+        `;
+        return `<tr><td>${e.certName || '-'}</td><td>${e.certLink ? `<a class="link" target="_blank" href="${e.certLink}">Open Link</a>` : '-'}</td><td>${pdfLink}</td><td>${e.updatedAt ? new Date(e.updatedAt).toLocaleString() : '-'}</td><td>${status}</td><td>${actions}</td></tr>`;
+      }).join("");
+      fillTable("#certTable tbody", certRows, 6, "No certifications.");
+
+      const comps = compsRes.documents || [];
+      const compRows = comps.map(e => {
+        let pdf = "-";
+        if (e.pdfProof) {
+          const blob = dataUrlToBlob(e.pdfProof.dataUrl);
+          const blobUrl = URL.createObjectURL(blob);
+          pdf = `<a class="link" href="${blobUrl}" download="${e.pdfProof.name}">Open PDF</a>`;
+        }
+        const geo = (e.geoProofs || []).map((g, i) => {
+          const blob = dataUrlToBlob(g.dataUrl);
+          const blobUrl = URL.createObjectURL(blob);
+          return `<a class="link" target="_blank" href="${blobUrl}">Photo ${i + 1}</a>`;
+        }).join(" | ") || "-";
+        const link = e.onlineLink ? `<a class="link" target="_blank" href="${e.onlineLink}">Open Link</a>` : "-";
+        const status = humanStatus(e.reviewStatus);
+        const actions = `
+          <button type="button" class="pill" onclick="setReview('competition', ${Number(e.id)}, 'approved')">Approve</button>
+          <button type="button" class="pill" onclick="setReview('competition', ${Number(e.id)}, 'rejected')">Decline</button>
+        `;
+        return `<tr><td>${e.competitionName || '-'}</td><td>${e.competitionDate || '-'}</td><td>${pdf}</td><td>${geo}</td><td>${link}</td><td>${status}</td><td>${actions}</td></tr>`;
+      }).join("");
+      fillTable("#competitionTable tbody", compRows, 7, "No competition certificates.");
+    } catch (err) {
+      if ((err.message || "").toLowerCase().includes("token") || (err.message || "").toLowerCase().includes("authorization")) {
+        AppStore.clearAuth();
+        window.location.href = "index.html";
+        return;
+      }
+      document.getElementById("profileText").innerText = err.message || "Failed to load student details.";
+    }
+  }
+
+  function goBack() {
+    window.location.href = "admin_dashboard.html";
+  }
+
+  function dataUrlToBlob(dataUrl) {
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  }
+
+  renderFromApi();
+</script>
+</body>
+</html>
+

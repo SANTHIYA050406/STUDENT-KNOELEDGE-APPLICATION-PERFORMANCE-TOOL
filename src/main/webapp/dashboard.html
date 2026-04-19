@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="css/hcare.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">H</div>
+        <div>
+          <strong>SKAPT</strong>
+          <small>Student Hub</small>
+        </div>
+      </div>
+      <button class="nav-link active" onclick="showPage('dashboardPage', this)">Dashboard</button>
+      <button class="nav-link" onclick="window.location.href='students_progress.html'">Student Progress</button>
+      <button class="nav-link" onclick="window.location.href='competition_report.html'">Competition Report</button>
+      <button class="nav-link" onclick="window.location.href='academics_report.html'">Academics Report</button>
+      <button class="nav-link" onclick="window.location.href='certifications.html'">Certifications</button>
+      <div class="sidebar-cta">
+        <strong>Need Guidance?</strong>
+        <p>Ask the performance desk for faster support.</p>
+        <a href="mailto:support@studenttool.com">Contact mentor</a>
+      </div>
+    </aside>
+
+    <div class="content">
+      <header class="top-bar">
+        <div class="title-block">
+          <p class="eyebrow">Student portal</p>
+          <h2 id="welcomeText">Dashboard</h2>
+        </div>
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="search" placeholder="Search insights, tests, or teachers" />
+        </div>
+        <div class="actions">
+          <div class="notification-area">
+            <button id="notificationBellButton" class="notification-bell" type="button" onclick="toggleNotificationPanel()" aria-label="Notifications">
+              <span class="bell-icon">🔔</span>
+              <span id="notificationCount" class="notification-count"></span>
+            </button>
+            <div id="notificationPanel" class="notification-panel">
+              <div class="notification-panel-header">
+                <span>Notifications</span>
+                <button type="button" class="notification-clear" onclick="clearNotifications()">Clear All</button>
+              </div>
+              <div id="notificationList" class="notification-items"></div>
+            </div>
+          </div>
+          <button type="button" class="pill" onclick="logout()">Logout</button>
+        </div>
+      </header>
+
+      <section id="dashboardPage" class="page active">
+        <div class="row">
+          <div class="card"><h3>Total Tests</h3><p id="totalTests">0</p></div>
+          <div class="card"><h3>Tests Attempted</h3><p id="testsAttempted">0</p></div>
+          <div class="card"><h3>Total Score</h3><p id="totalScore">0%</p></div>
+        </div>
+
+        <div class="row" id="studentProfileRow" style="display:none;">
+          <div class="card" style="width:100%;">
+            <h3>Student Basic Details</h3>
+            <p id="studentProfileText">-</p>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Teacher Feedback</h3>
+            <p id="studentFeedbackLine" style="margin:0;padding:10px;border:1px solid #e0e8f3;border-radius:8px;background:#fbfdff;">No feedback yet.</p>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="card">
+            <h3>Result History</h3>
+            <div class="table-wrap">
+              <table id="historyTable">
+                <thead><tr><th>Test Name</th><th>Score (%)</th><th>Date</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Performance Graph</h3>
+            <div class="chart-wrap"><div class="chart-box"><canvas id="studentChart"></canvas></div></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Available Tests</h3>
+            <div id="testsContainer" class="tests"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="connectionsPage" class="page">
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Teacher Group Requests</h3>
+            <p class="muted">Accept requests so your teacher can access your performance data.</p>
+            <div class="table-wrap">
+              <table id="studentRequestsTable">
+                <thead><tr><th>Teacher</th><th>Department</th><th>Group</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Notifications</h3>
+            <p class="muted">Send a quick notification to your connected teachers. You can revisit the full stream with the bell icon above.</p>
+            <div class="grid">
+              <select id="notifyTeacherSelect"></select>
+              <textarea id="studentNotificationMsg" placeholder="Type notification for selected teacher"></textarea>
+              <button onclick="sendNotificationToTeacher()">Send Notification</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="js/store.js"></script>
+  <script src="js/api.js"></script>
+<script>
+  let user = AppStore.getState().user || JSON.parse(localStorage.getItem("currentUser") || "null");
+  let tests = [];
+  let results = [];
+
+  if (!user || user.role !== "student") window.location.href = "index.html";
+
+  document.getElementById("welcomeText").innerText = `Welcome, ${(user.studentProfile?.name || user.username)} (student)`;
+
+  function updateStudentProfile(targetUser) {
+    const profile = targetUser?.studentProfile;
+    if (profile) {
+      document.getElementById("studentProfileRow").style.display = "flex";
+      document.getElementById("studentProfileText").innerText = `Name: ${profile.name || targetUser.username} | Roll No: ${profile.rollNo || '-'} | Department: ${profile.department || '-'} | Year of Study: ${profile.yearOfStudy ?? '-'} | Academics CGPA: ${profile.cgpa ?? '-'}`;
+    } else {
+      document.getElementById("studentProfileRow").style.display = "none";
+    }
+  }
+
+  updateStudentProfile(user);
+
+  const allRequests = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
+  const currentRollNo = (user.studentProfile?.rollNo || user.studentProfile?.rollNumber || "").trim().toLowerCase();
+  const myRequests = allRequests.filter(req => {
+    const sameId = req.studentId && user.id && String(req.studentId) === String(user.id);
+    const sameUsername = (req.studentUsername || "").toLowerCase() === (user.username || "").toLowerCase();
+    const sameRoll = currentRollNo && (req.studentRollNo || "").trim().toLowerCase() === currentRollNo;
+    return sameId || sameUsername || sameRoll;
+  });
+
+  function renderRequestsTable() {
+    const reqBody = document.querySelector("#studentRequestsTable tbody");
+    reqBody.innerHTML = myRequests.length
+      ? myRequests.sort((a,b)=>b.id-a.id).map(req => {
+          const action = req.status === "pending"
+            ? `<button onclick="updateRequest(${req.id},'accepted')">Accept</button><button class='danger' onclick="updateRequest(${req.id},'rejected')">Reject</button>`
+            : "-";
+          return `<tr><td>${req.teacherName || req.teacherUsername}</td><td>${req.teacherDepartment || '-'}</td><td>${req.groupName || 'General'}</td><td>${req.status}</td><td>${action}</td></tr>`;
+        }).join("")
+      : '<tr><td colspan="5">No requests received.</td></tr>';
+  }
+
+  function renderScoreSections() {
+    const userResults = results.filter(r => r.studentUsername === user.username || r.username === user.username);
+    document.getElementById("totalTests").innerText = tests.length;
+    document.getElementById("testsAttempted").innerText = userResults.length;
+    document.getElementById("totalScore").innerText = (userResults.length ? Math.round(userResults.reduce((s,r)=>s+Number(r.score||0),0)/userResults.length) : 0) + "%";
+
+    const historyBody = document.querySelector("#historyTable tbody");
+    historyBody.innerHTML = userResults.length
+      ? userResults.map(r => {
+          const t = tests.find(x => Number(x.id) === Number(r.testId));
+          const dateText = r.date || (r.submittedAt ? new Date(r.submittedAt).toLocaleDateString() : "-");
+          return `<tr><td>${t ? t.title : (r.testTitle || 'Unknown Test')}</td><td>${r.score}%</td><td>${dateText}</td></tr>`;
+        }).join("")
+      : '<tr><td colspan="3">No tests attempted yet.</td></tr>';
+
+    const chartCanvas = document.getElementById("studentChart");
+    chartCanvas.replaceWith(chartCanvas.cloneNode(false));
+    const freshCanvas = document.getElementById("studentChart");
+    if (userResults.length) {
+      const ctx = freshCanvas.getContext("2d");
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: userResults.map(r => r.date || (r.submittedAt ? new Date(r.submittedAt).toLocaleDateString() : "-")),
+          datasets: [{
+            label: "Score (%)",
+            data: userResults.map(r => Number(r.score || 0)),
+            borderColor: "#2f63b4",
+            backgroundColor: "rgba(47,99,180,0.15)",
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
+      });
+    }
+
+    document.getElementById("testsContainer").innerHTML = tests.map(test => `<div class='test'><h4>${test.title}</h4><p>Time: ${test.duration || 30} mins</p><button onclick='startTest(${test.id})'>Start Test</button></div>`).join("");
+  }
+
+  async function loadApiData() {
+    try {
+      const meRes = await Api.me();
+      if (meRes?.user) {
+        user = meRes.user;
+        AppStore.setAuth(user, localStorage.getItem("token"));
+        updateStudentProfile(user);
+      }
+
+      const [testsRes, resultsRes] = await Promise.all([Api.getTests(), Api.getResults()]);
+      tests = testsRes.tests || [];
+      results = resultsRes.results || [];
+      AppStore.setTests(tests);
+      AppStore.setResults(results);
+      renderScoreSections();
+    } catch (err) {
+      if ((err.message || "").toLowerCase().includes("token") || (err.message || "").toLowerCase().includes("authorization")) {
+        AppStore.clearAuth();
+        window.location.href = "index.html";
+        return;
+      }
+      console.error("Failed to load API data", err);
+      alert(err.message || "Failed to load dashboard data");
+    }
+  }
+
+  function renderTeacherNotifyTargets() {
+    const acceptedTeacherUsernames = [...new Set(myRequests.filter(r => r.status === "accepted").map(r => r.teacherUsername))];
+    const select = document.getElementById("notifyTeacherSelect");
+    select.innerHTML = acceptedTeacherUsernames.length
+      ? acceptedTeacherUsernames.map(u => `<option value="${u}">${u}</option>`).join("")
+      : '<option value="">No connected teachers</option>';
+  }
+
+  function sendNotificationToTeacher() {
+    const toUsername = document.getElementById("notifyTeacherSelect").value;
+    const message = document.getElementById("studentNotificationMsg").value.trim();
+    if (!toUsername) { alert("No connected teacher selected."); return; }
+    if (!message) { alert("Notification message is required."); return; }
+
+    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+    notes.push({ id: Date.now(), fromUsername: user.username, fromRole: "student", toUsername, toRole: "teacher", message, createdAt: new Date().toLocaleString(), read: false });
+    localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
+    document.getElementById("studentNotificationMsg").value = "";
+    alert("Notification sent.");
+  }
+
+  function getMyNotifications() {
+    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+    return notes
+      .filter(n => n.toUsername === user.username && !n.read)
+      .sort((a,b)=>b.id-a.id);
+  }
+
+  function renderNotificationPanel() {
+    const panel = document.getElementById("notificationPanel");
+    const listEl = document.getElementById("notificationList");
+    const countEl = document.getElementById("notificationCount");
+    if (!panel || !listEl || !countEl) return;
+    const notifications = getMyNotifications();
+    if (!notifications.length) {
+      listEl.innerHTML = '<p class="muted" style="padding:12px 16px;">No notifications yet.</p>';
+      countEl.style.display = "none";
+    } else {
+      countEl.innerText = notifications.length;
+      countEl.style.display = "inline";
+      listEl.innerHTML = notifications.map(n => `
+        <div class="notification-item">
+          <div class="notification-header">
+            <strong>${n.fromUsername} (${n.fromRole})</strong>
+            <div class="notification-actions">
+              <button type="button" class="ghost-action small-action" onclick="markNotificationAsRead(${n.id})" aria-label="Mark notification read">✔</button>
+            </div>
+          </div>
+          <div>${n.message}</div>
+          <span>${n.createdAt || ""}</span>
+        </div>
+      `).join("");
+    }
+  }
+
+  function toggleNotificationPanel() {
+    const panel = document.getElementById("notificationPanel");
+    if (!panel) return;
+    panel.classList.toggle("open");
+    renderNotificationPanel();
+  }
+
+  function markNotificationAsRead(id) {
+    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+    let changed = false;
+    for (const note of notes) {
+      if (note.id === id && !note.read) {
+        note.read = true;
+        changed = true;
+        break;
+      }
+    }
+    if (changed) {
+      localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
+    }
+    renderNotificationPanel();
+  }
+
+  function clearNotifications() {
+    const remaining = (JSON.parse(localStorage.getItem("dashboardNotifications")) || [])
+      .filter(n => n.toUsername !== user.username);
+    localStorage.setItem("dashboardNotifications", JSON.stringify(remaining));
+    renderNotificationPanel();
+  }
+
+  document.addEventListener("click", event => {
+    const panel = document.getElementById("notificationPanel");
+    const bell = document.getElementById("notificationBellButton");
+    if (!panel || !bell) return;
+    if (!panel.contains(event.target) && !bell.contains(event.target)) {
+      panel.classList.remove("open");
+    }
+  });
+
+  window.addEventListener("storage", event => {
+    if (event.key === "dashboardNotifications") {
+      renderNotificationPanel();
+    }
+  });
+
+  function renderStudentFeedback() {
+    const feedbacks = JSON.parse(localStorage.getItem("studentFeedbackMessages")) || [];
+    const mine = feedbacks.filter(f => f.toUsername === user.username).sort((a,b)=>b.id-a.id);
+    document.getElementById("studentFeedbackLine").innerText = mine.length ? mine[0].message : "No feedback yet.";
+  }
+
+  function updateRequest(requestId, status) {
+    const requests = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
+    const currentRollNo = (user.studentProfile?.rollNo || user.studentProfile?.rollNumber || "").trim().toLowerCase();
+    const idx = requests.findIndex(r => {
+      if (r.id !== requestId) return false;
+      const sameId = r.studentId && user.id && String(r.studentId) === String(user.id);
+      const sameUsername = (r.studentUsername || "").toLowerCase() === (user.username || "").toLowerCase();
+      const sameRoll = currentRollNo && (r.studentRollNo || "").trim().toLowerCase() === currentRollNo;
+      return sameId || sameUsername || sameRoll;
+    });
+    if (idx === -1) return;
+    requests[idx].status = status;
+    requests[idx].respondedAt = new Date().toLocaleString();
+    localStorage.setItem("studentGroupRequests", JSON.stringify(requests));
+    window.location.reload();
+  }
+
+  function showPage(pageId, btn) {
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.getElementById(pageId).classList.add("active");
+    document.querySelectorAll(".side-link").forEach(x => x.classList.remove("active"));
+    btn.classList.add("active");
+  }
+
+  function startTest(id) { localStorage.setItem("selectedTestId", id); window.location.href = "take_test.html"; }
+  function logout() { AppStore.clearAuth(); window.location.href = "index.html"; }
+
+  renderRequestsTable();
+  renderTeacherNotifyTargets();
+  renderStudentFeedback();
+  renderNotificationPanel();
+  loadApiData();
+</script>
+</body>
+</html>
+
+

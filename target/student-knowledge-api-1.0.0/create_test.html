@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create / Manage Tests</title>
+  <link rel="stylesheet" href="css/hcare.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">H</div>
+        <div>
+          <strong>SKAPT</strong>
+          <small>Teacher Hub</small>
+        </div>
+      </div>
+      <nav>
+        <button class="nav-link" onclick="window.location.href='admin_dashboard.html'">Dashboard</button>
+        <button class="nav-link" onclick="window.location.href='teacher_groups.html'">My Groups</button>
+        <button class="nav-link active" onclick="window.location.href='create_test.html'">Create Test</button>
+      </nav>
+      <div class="sidebar-cta">
+        <strong>Create test</strong>
+        <p>Keep question banks updated and automatically sync with student dashboards.</p>
+        <a href="mailto:support@studenttool.com">Need help?</a>
+      </div>
+    </aside>
+    <div class="content">
+      <header class="top-bar">
+        <div class="title-block">
+          <p class="eyebrow">Test builder</p>
+          <h2>Create / Manage Tests</h2>
+          <p class="muted">Build question banks or keep existing tests in sync from this single console.</p>
+        </div>
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="search" placeholder="Search tests, sections, or tags" />
+        </div>
+        <div class="actions">
+          <div class="notification-area">
+            <button id="notificationBellButton" class="notification-bell" type="button" aria-label="Notifications" onclick="toggleNotificationPanel()">
+              <span class="bell-icon">🔔</span>
+              <span id="notificationCount" class="notification-count"></span>
+            </button>
+            <div id="notificationPanel" class="notification-panel">
+              <div class="notification-panel-header">
+                <span>Notifications</span>
+                <button type="button" class="notification-clear" onclick="clearNotifications()">Clear All</button>
+              </div>
+              <div id="notificationList" class="notification-items"></div>
+            </div>
+          </div>
+          <a class="ghost-link" href="teacher_groups.html">Back to Groups</a>
+          <button type="button" class="pill" onclick="logout()">Sign out</button>
+        </div>
+      </header>
+
+      <div class="container">
+        <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Test definition</h3>
+            <p class="muted">Define metadata and the questions you want on this test.</p>
+          </div>
+          <div class="actions">
+            <button onclick="saveTest()">Save Test</button>
+            <button class="danger" onclick="resetForm()">Reset</button>
+          </div>
+        </div>
+        <div class="grid">
+          <input type="text" id="subject" placeholder="Subject" />
+          <input type="text" id="title" placeholder="Test title" />
+          <input type="number" id="duration" placeholder="Duration (minutes)" min="5" value="30" />
+          <input type="number" id="numQuestions" placeholder="Number of questions" min="1" />
+        </div>
+        <div id="questionsContainer"></div>
+      </section>
+
+      <section class="panel">
+        <h3>My tests</h3>
+        <p class="muted">Edit or remove previously saved tests.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Title</th><th>Subject</th><th>Questions</th><th>Actions</th></tr></thead>
+            <tbody id="testsBody"></tbody>
+          </table>
+        </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/store.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    const numQuestionsInput = document.getElementById("numQuestions");
+    const questionsContainer = document.getElementById("questionsContainer");
+
+    numQuestionsInput.addEventListener("change", () => buildQuestionInputs(Number(numQuestionsInput.value)));
+
+    function buildQuestionInputs(count, existing = []) {
+      questionsContainer.innerHTML = "";
+      for (let i = 0; i < count; i++) {
+        const q = existing[i] || { text: "", options: ["", "", "", ""], answer: "A" };
+        const div = document.createElement("div");
+        div.className = "question-card";
+        div.innerHTML = `
+          <h4>Question ${i + 1}</h4>
+          <div class="question-row">
+            <input type="text" class="qText" placeholder="Question" value="${q.text}">
+            <input type="text" class="optA" placeholder="Option A" value="${q.options[0] || ""}">
+            <input type="text" class="optB" placeholder="Option B" value="${q.options[1] || ""}">
+            <input type="text" class="optC" placeholder="Option C" value="${q.options[2] || ""}">
+            <input type="text" class="optD" placeholder="Option D" value="${q.options[3] || ""}">
+            <input type="text" class="correctAns" placeholder="Correct (A/B/C/D)" value="${q.answer}">
+          </div>
+        `;
+        questionsContainer.appendChild(div);
+      }
+    }
+
+    function collectQuestions() {
+      return [...document.querySelectorAll("#questionsContainer > .question-card")].map(div => ({
+        text: div.querySelector(".qText").value.trim(),
+        options: [
+          div.querySelector(".optA").value.trim(),
+          div.querySelector(".optB").value.trim(),
+          div.querySelector(".optC").value.trim(),
+          div.querySelector(".optD").value.trim()
+        ],
+        answer: div.querySelector(".correctAns").value.trim().toUpperCase()
+      }));
+    }
+
+    async function saveTest() {
+      try {
+        const payload = {
+          subject: document.getElementById("subject").value.trim(),
+          title: document.getElementById("title").value.trim(),
+          duration: Number(document.getElementById("duration").value || 30),
+          questions: collectQuestions()
+        };
+
+        if (!payload.subject || !payload.title || !payload.questions.length) {
+          alert("Subject, title and questions are required.");
+          return;
+        }
+
+        const editingId = document.getElementById("editingTestId")?.value;
+        if (editingId) {
+          await Api.updateTest(editingId, payload);
+        } else {
+          await Api.createTest(payload);
+        }
+
+        resetForm();
+        await loadTests();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function editTest(id) {
+      const { tests } = AppStore.getState();
+      const t = tests.find(x => x.id === id);
+      if (!t) return;
+
+      document.getElementById("editingTestId").value = t.id;
+      document.getElementById("subject").value = t.subject;
+      document.getElementById("title").value = t.title;
+      document.getElementById("duration").value = t.duration;
+      document.getElementById("numQuestions").value = t.questions.length;
+      buildQuestionInputs(t.questions.length, t.questions);
+    }
+
+    async function deleteTest(id) {
+      if (!confirm("Delete this test?")) return;
+      try {
+        await Api.deleteTest(id);
+        await loadTests();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function resetForm() {
+      document.getElementById("editingTestId").value = "";
+      document.getElementById("subject").value = "";
+      document.getElementById("title").value = "";
+      document.getElementById("duration").value = 30;
+      document.getElementById("numQuestions").value = "";
+      questionsContainer.innerHTML = "";
+    }
+
+    async function loadTests() {
+      const user = AppStore.getState().user;
+      if (!user || (user.role !== "teacher" && user.role !== "admin")) {
+        window.location.href = "index.html";
+        return;
+      }
+
+      const { tests } = await Api.getTests();
+      const mine = tests.filter(t => t.createdBy === user.id || user.role === "admin");
+      AppStore.setTests(mine);
+
+      const tbody = document.getElementById("testsBody");
+      tbody.innerHTML = mine.length
+        ? mine.map(t => `<tr><td>${t.title}</td><td>${t.subject}</td><td>${t.questions.length}</td><td><div class="actions"><button onclick="editTest(${t.id})">Edit</button><button class="danger" onclick="deleteTest(${t.id})">Delete</button></div></td></tr>`).join("")
+        : '<tr><td colspan="4">No tests found.</td></tr>';
+    }
+
+    function logout() {
+      AppStore.clearAuth();
+      window.location.href = "index.html";
+    }
+
+    function getMyNotifications() {
+      const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+      return notes
+        .filter(n => n.toUsername === (AppStore.getState().user?.username || "") && !n.read)
+        .sort((a,b)=>b.id-a.id);
+    }
+
+    function renderNotificationPanel() {
+      const panel = document.getElementById("notificationPanel");
+      const listEl = document.getElementById("notificationList");
+      const countEl = document.getElementById("notificationCount");
+      if (!panel || !listEl || !countEl) return;
+      const notifications = getMyNotifications();
+      if (!notifications.length) {
+        listEl.innerHTML = '<p class="muted" style="padding:12px 16px;">No notifications yet.</p>';
+        countEl.style.display = "none";
+      } else {
+        countEl.innerText = notifications.length;
+        countEl.style.display = "inline";
+        listEl.innerHTML = notifications.map(n => `
+          <div class="notification-item">
+            <div class="notification-header">
+              <strong>${n.fromUsername || 'System'}</strong>
+              <div class="notification-actions">
+                <button type="button" class="ghost-action small-action" onclick="markNotificationAsRead(${n.id})" aria-label="Mark notification read">✔</button>
+              </div>
+            </div>
+            <div>${n.message}</div>
+            <span>${n.createdAt || ""}</span>
+          </div>
+        `).join("");
+      }
+    }
+
+    function toggleNotificationPanel() {
+      const panel = document.getElementById("notificationPanel");
+      if (!panel) return;
+      panel.classList.toggle("open");
+      renderNotificationPanel();
+    }
+
+    function markNotificationAsRead(id) {
+      const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+      let changed = false;
+      for (const note of notes) {
+        if (note.id === id && !note.read) {
+          note.read = true;
+          changed = true;
+          break;
+        }
+      }
+      if (changed) {
+        localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
+      }
+      renderNotificationPanel();
+    }
+
+    function clearNotifications() {
+      const remaining = (JSON.parse(localStorage.getItem("dashboardNotifications")) || [])
+        .filter(n => n.toUsername !== (AppStore.getState().user?.username || ""));
+      localStorage.setItem("dashboardNotifications", JSON.stringify(remaining));
+      renderNotificationPanel();
+    }
+
+    document.addEventListener("click", event => {
+      const panel = document.getElementById("notificationPanel");
+      const bell = document.getElementById("notificationBellButton");
+      if (!panel || !bell) return;
+      if (!panel.contains(event.target) && !bell.contains(event.target)) {
+        panel.classList.remove("open");
+      }
+    });
+
+    window.addEventListener("storage", event => {
+      if (event.key === "dashboardNotifications") {
+        renderNotificationPanel();
+      }
+    });
+
+    (function init() {
+      const hiddenIdInput = document.createElement("input");
+      hiddenIdInput.type = "hidden";
+      hiddenIdInput.id = "editingTestId";
+      document.body.appendChild(hiddenIdInput);
+      loadTests();
+      renderNotificationPanel();
+    })();
+  </script>
+</body>
+</html>
+

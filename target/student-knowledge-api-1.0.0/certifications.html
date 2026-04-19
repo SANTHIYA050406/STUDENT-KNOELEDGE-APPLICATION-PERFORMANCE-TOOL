@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Certifications - SKAPT</title>
+  <link rel="stylesheet" href="css/hcare.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">S</div>
+        <div>
+          <strong>SKAPT</strong>
+          <small>Student Hub</small>
+        </div>
+      </div>
+      <nav>
+        <button class="nav-link" onclick="window.location.href='dashboard.html'">Dashboard</button>
+        <button class="nav-link" onclick="window.location.href='students_progress.html'">Student Progress</button>
+        <button class="nav-link" onclick="window.location.href='competition_report.html'">Competition Report</button>
+        <button class="nav-link" onclick="window.location.href='academics_report.html'">Academics Report</button>
+        <button class="nav-link active" onclick="window.location.href='certifications.html'">Certifications</button>
+      </nav>
+      <div class="sidebar-cta">
+        <strong>Certifications</strong>
+        <p>Upload and manage your course certifications and achievements.</p>
+        <a href="mailto:support@studenttool.com">Need help?</a>
+      </div>
+    </aside>
+
+    <div class="content">
+      <header class="top-bar">
+        <div class="title-block">
+          <p class="eyebrow">Student portal</p>
+          <h2>Course Certifications</h2>
+        </div>
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="search" placeholder="Search certifications" />
+        </div>
+        <div class="actions">
+          <div class="notification-area">
+            <button id="notificationBellButton" class="notification-bell" type="button" onclick="toggleNotificationPanel()" aria-label="Notifications">
+              <span class="bell-icon">🔔</span>
+              <span id="notificationCount" class="notification-count"></span>
+            </button>
+            <div id="notificationPanel" class="notification-panel">
+              <div class="notification-panel-header">
+                <span>Notifications</span>
+                <button type="button" class="notification-clear" onclick="clearNotifications()">Clear All</button>
+              </div>
+              <div id="notificationList" class="notification-items"></div>
+            </div>
+          </div>
+          <button type="button" class="pill" onclick="logout()">Logout</button>
+        </div>
+      </header>
+
+      <div class="container">
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h3>Update Course Certifications</h3>
+              <p class="muted">Add certification name, optional link, and PDF proof.</p>
+            </div>
+          </div>
+          <div class="grid">
+            <input id="certName" placeholder="Certification Name" />
+            <input id="certLink" type="url" placeholder="Certification Link (optional)" />
+            <input id="certPdf" type="file" accept="application/pdf" />
+            <button onclick="saveCertificationEntry()">Update Certification</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h3>Certification History</h3>
+          <div class="table-wrap">
+            <table id="certificationHistoryTable">
+              <thead>
+                <tr>
+                  <th>Certification</th>
+                  <th>Certificate Link</th>
+                  <th>PDF</th>
+                  <th>Updated At</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/store.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    let user = AppStore.getState().user || JSON.parse(localStorage.getItem("currentUser") || "null");
+    let certificationDocs = [];
+
+    async function ensureStudentSession() {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        window.location.href = "index2.html";
+        return false;
+      }
+
+      try {
+        const meRes = await Api.me();
+        if (meRes && meRes.user) {
+          user = meRes.user;
+          if (user.role !== "student") {
+            window.location.href = "admin_dashboard.html";
+            return false;
+          }
+          AppStore.setAuth(user, token);
+          localStorage.setItem("currentUser", JSON.stringify(user));
+        }
+        return true;
+      } catch (err) {
+        const msg = String(err.message || "").toLowerCase();
+        if (msg.includes("token") || msg.includes("authorization") || msg.includes("401")) {
+          AppStore.clearAuth();
+          window.location.href = "index2.html";
+          return false;
+        }
+        alert(err.message || "Failed to validate session.");
+        return false;
+      }
+    }
+
+    // Notification functions
+    function noteRecipient(note) {
+      return note.toUsername ?? note.to ?? "";
+    }
+
+    function toggleNotificationPanel() {
+      const panel = document.getElementById("notificationPanel");
+      panel.style.display = panel.style.display === "block" ? "none" : "block";
+    }
+
+    function clearNotifications() {
+      localStorage.removeItem("dashboardNotifications");
+      document.getElementById("notificationList").innerHTML = "";
+      document.getElementById("notificationCount").textContent = "";
+    }
+
+    function getMyNotifications() {
+      const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+      return notes.filter(n => {
+        const recipient = noteRecipient(n);
+        return recipient === user.username || recipient === "all";
+      });
+    }
+
+    function renderNotificationPanel() {
+      const panel = document.getElementById("notificationPanel");
+      const listEl = document.getElementById("notificationList");
+      const countEl = document.getElementById("notificationCount");
+      const notes = getMyNotifications();
+
+      countEl.textContent = notes.filter(n => !n.read).length || "";
+      listEl.innerHTML = notes.length
+        ? notes.sort((a,b)=>b.id-a.id).map(note => `
+            <div class="notification-item ${!note.read ? 'unread' : ''}" onclick="markAsRead(${note.id})">
+              <div class="notification-title">${note.title || 'Notification'}</div>
+              <div class="notification-message">${note.message}</div>
+              <div class="notification-time">${new Date(note.timestamp).toLocaleDateString()}</div>
+            </div>
+          `).join("")
+        : '<div class="notification-item"><div class="notification-message">No notifications</div></div>';
+    }
+
+    function markAsRead(id) {
+      const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+      const note = notes.find(n => n.id === id);
+      if (note) note.read = true;
+      localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
+      renderNotificationPanel();
+    }
+
+    function logout() {
+      AppStore.clearAuth();
+      window.location.href = "index.html";
+    }
+
+    // Certification functions
+    async function loadCertificationHistory() {
+      try {
+        const { documents } = await Api.getCertificationDocuments();
+        certificationDocs = documents;
+        renderCertificationTable();
+      } catch (err) {
+        console.error("Failed to load certification docs:", err);
+        alert("Failed to load certification history: " + err.message);
+      }
+    }
+
+    function renderCertificationTable() {
+      const tbody = document.querySelector("#certificationHistoryTable tbody");
+      tbody.innerHTML = certificationDocs.length
+        ? certificationDocs.map(doc => {
+            let pdfLink = '-';
+            if (doc.pdfProof?.dataUrl) {
+              const blob = dataUrlToBlob(doc.pdfProof.dataUrl);
+              const blobUrl = URL.createObjectURL(blob);
+              pdfLink = `<a href="${blobUrl}" target="_blank">View PDF</a>`;
+            }
+            return `
+              <tr>
+                <td>${doc.certName || '-'}</td>
+                <td>${doc.certLink ? `<a href="${doc.certLink}" target="_blank">View Link</a>` : '-'}</td>
+                <td>${pdfLink}</td>
+                <td>${doc.updatedAt ? new Date(doc.updatedAt).toLocaleDateString() : '-'}</td>
+              </tr>
+            `;
+          }).join("")
+        : '<tr><td colspan="4">No certifications uploaded yet.</td></tr>';
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function saveCertificationEntry() {
+      const certName = document.getElementById("certName").value.trim();
+      const certLink = document.getElementById("certLink").value.trim();
+      const certPdf = document.getElementById("certPdf").files[0];
+
+      if (!certName) {
+        alert("Certification name is required.");
+        return;
+      }
+
+      if (!certLink && !certPdf) {
+        alert("Either certification link or PDF proof is required.");
+        return;
+      }
+
+      try {
+        const payload = {
+          certName,
+          certLink: certLink || undefined,
+          pdfProof: certPdf
+            ? {
+                name: certPdf.name,
+                dataUrl: await fileToDataUrl(certPdf)
+              }
+            : undefined
+        };
+
+        await Api.createCertificationDocument(payload);
+        alert("Certification uploaded successfully!");
+        document.getElementById("certName").value = "";
+        document.getElementById("certLink").value = "";
+        document.getElementById("certPdf").value = "";
+        loadCertificationHistory();
+      } catch (err) {
+        alert("Failed to upload certification: " + err.message);
+      }
+    }
+
+    // Initialize
+    document.addEventListener("DOMContentLoaded", async () => {
+      const ok = await ensureStudentSession();
+      if (!ok) return;
+      await loadCertificationHistory();
+      renderNotificationPanel();
+    });
+
+    function dataUrlToBlob(dataUrl) {
+      const arr = dataUrl.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new Blob([u8arr], { type: mime });
+    }
+  </script>
+</body>
+</html>
