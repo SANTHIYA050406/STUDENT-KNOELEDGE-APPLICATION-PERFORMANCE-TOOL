@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 import javax.sql.DataSource;
+import java.net.URI;
 import java.sql.Connection;
 import java.sql.Statement;
 
@@ -17,10 +18,12 @@ public final class Db {
             throw new RuntimeException("MySQL driver load failed", ex);
         }
 
+        DbRuntime runtime = resolveRuntimeConfig();
+
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(AppConfig.get("db.url"));
-        config.setUsername(AppConfig.get("db.username"));
-        config.setPassword(AppConfig.get("db.password"));
+        config.setJdbcUrl(runtime.jdbcUrl);
+        config.setUsername(runtime.username);
+        config.setPassword(runtime.password);
         config.setMaximumPoolSize(10);
         config.setMinimumIdle(5);
         config.setConnectionTimeout(30000);
@@ -34,6 +37,114 @@ public final class Db {
 
     public static Connection getConnection() throws Exception {
         return DATA_SOURCE.getConnection();
+    }
+
+    private static final class DbRuntime {
+        final String jdbcUrl;
+        final String username;
+        final String password;
+
+        DbRuntime(String jdbcUrl, String username, String password) {
+            this.jdbcUrl = jdbcUrl;
+            this.username = username;
+            this.password = password;
+        }
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String v : values) {
+            if (v != null && !v.isBlank()) return v;
+        }
+        return null;
+    }
+
+    private static String toJdbcFromMysqlUrl(String mysqlUrl) {
+        try {
+            URI uri = new URI(mysqlUrl);
+            String host = uri.getHost();
+            int port = uri.getPort() == -1 ? 3306 : uri.getPort();
+            String db = uri.getPath();
+            if (db == null) db = "";
+            if (db.startsWith("/")) db = db.substring(1);
+            if (host == null || host.isBlank() || db.isBlank()) {
+                throw new IllegalArgumentException("Invalid MYSQL_URL (missing host/db)");
+            }
+
+            return "jdbc:mysql://" + host + ":" + port + "/" + db +
+                "?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+        } catch (Exception ex) {
+            throw new RuntimeException("Invalid MYSQL_URL format", ex);
+        }
+    }
+
+    private static DbRuntime resolveRuntimeConfig() {
+        // Railway MySQL provides MYSQL_URL and/or split variables like MYSQLHOST, MYSQLPORT, etc.
+        // Our app uses JDBC, so convert when needed.
+        String rawUrl = firstNonBlank(
+            System.getenv("DB_URL"),
+            System.getenv("MYSQL_URL"),
+            System.getProperty("db.url"),
+            AppConfig.getOptional("db.url")
+        );
+
+        String username = firstNonBlank(
+            System.getenv("DB_USERNAME"),
+            System.getenv("MYSQLUSER"),
+            System.getProperty("db.username"),
+            AppConfig.getOptional("db.username")
+        );
+
+        String password = firstNonBlank(
+            System.getenv("DB_PASSWORD"),
+            System.getenv("MYSQLPASSWORD"),
+            System.getProperty("db.password"),
+            AppConfig.getOptional("db.password")
+        );
+
+        String jdbcUrl;
+        if (rawUrl == null || rawUrl.isBlank()) {
+            String host = firstNonBlank(System.getenv("MYSQLHOST"), System.getenv("DB_HOST"));
+            String port = firstNonBlank(System.getenv("MYSQLPORT"), System.getenv("DB_PORT"));
+            String db = firstNonBlank(System.getenv("MYSQLDATABASE"), System.getenv("DB_NAME"));
+            if (host == null || db == null) {
+                throw new RuntimeException("Database config missing. Set DB_URL (jdbc:mysql://...) or Railway MySQL variables.");
+            }
+            String portVal = (port == null || port.isBlank()) ? "3306" : port.trim();
+            jdbcUrl = "jdbc:mysql://" + host.trim() + ":" + portVal + "/" + db.trim() +
+                "?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+        } else if (rawUrl.startsWith("jdbc:")) {
+            jdbcUrl = rawUrl;
+        } else if (rawUrl.startsWith("mysql://") || rawUrl.startsWith("mysqls://")) {
+            // Railway MYSQL_URL is typically mysql://user:pass@host:port/db
+            jdbcUrl = toJdbcFromMysqlUrl(rawUrl.replace("mysqls://", "mysql://"));
+
+            // If username/password weren't explicitly provided, try extracting from the URL.
+            try {
+                URI uri = new URI(rawUrl.replace("mysqls://", "mysql://"));
+                String userInfo = uri.getUserInfo(); // user:pass
+                if (userInfo != null && !userInfo.isBlank()) {
+                    String[] parts = userInfo.split(":", 2);
+                    if ((username == null || username.isBlank()) && parts.length >= 1) {
+                        username = parts[0];
+                    }
+                    if ((password == null || password.isBlank()) && parts.length == 2) {
+                        password = parts[1];
+                    }
+                }
+            } catch (Exception ignored) {}
+        } else {
+            // Assume user provided a JDBC-ish URL without the jdbc: prefix.
+            jdbcUrl = rawUrl;
+        }
+
+        if (username == null || username.isBlank()) {
+            throw new RuntimeException("Database username missing. Set DB_USERNAME or MYSQLUSER.");
+        }
+        if (password == null) {
+            password = "";
+        }
+
+        return new DbRuntime(jdbcUrl, username, password);
     }
 
     public static void initializeSchema() {

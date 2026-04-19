@@ -20,6 +20,14 @@ public final class AppConfig {
     private AppConfig() {}
 
     public static String get(String key) {
+        String value = getOptional(key);
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Missing config key: " + key);
+        }
+        return value;
+    }
+
+    public static String getOptional(String key) {
         // Prefer runtime overrides (Railway variables / JVM system props) over bundled defaults.
         // Example mappings:
         //   db.url -> DB_URL
@@ -34,10 +42,11 @@ public final class AppConfig {
         if (env == null || env.isBlank()) {
             env = System.getenv(key);
         }
-        String value = (env != null && !env.isBlank()) ? env : PROPS.getProperty(key);
-        if (value == null || value.isBlank()) {
-            throw new IllegalStateException("Missing config key: " + key);
+        if (env != null && !env.isBlank()) {
+            return env;
         }
-        return value;
+
+        String fromProps = PROPS.getProperty(key);
+        return (fromProps == null || fromProps.isBlank()) ? null : fromProps;
     }
 }

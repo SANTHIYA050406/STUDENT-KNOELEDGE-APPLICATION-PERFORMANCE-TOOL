@@ -22,7 +22,7 @@ This repo includes a root `Dockerfile` that builds the `backend` WAR and runs it
 2. Railway: create a **New Project** → **Deploy from GitHub Repo** → select this repo/branch.
 3. Add a MySQL database service to the same Railway project.
 4. In your app service → **Variables**, set:
-   - `DB_URL` = `{{MySQL.MYSQL_URL}}`
+   - `DB_URL` = `{{MySQL.MYSQL_URL}}` (supported; converted to JDBC at runtime)
    - `DB_USERNAME` = `{{MySQL.MYSQLUSER}}`
    - `DB_PASSWORD` = `{{MySQL.MYSQLPASSWORD}}`
    - `JWT_SECRET` = a strong secret (32+ characters)
