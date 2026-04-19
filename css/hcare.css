@@ -354,13 +354,17 @@ button.ghost:hover {
 }
 
 .teacher-groups-scroll-panel {
-  max-height: 420px;
+  max-height: min(520px, calc(100vh - 280px));
   overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
 }
 
 .teacher-groups-create-panel {
-  max-height: 420px;
+  max-height: min(520px, calc(100vh - 280px));
   overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
 }
 
 .teacher-groups-scroll-area {

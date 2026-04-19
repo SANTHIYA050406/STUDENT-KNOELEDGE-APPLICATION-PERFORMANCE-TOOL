@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-target/
-*.log
-*.class
-=======
 # Java / Maven
+target/
 backend/target/
 *.class
 *.war
@@ -22,4 +18,16 @@ Desktop.ini
 
 # Optional tooling
 .postman/
->>>>>>> 9b203900f9815f09d466df423c8519acb8e7b716
+postman/
+
+# Prevent accidental duplicate copies created under backend/
+/backend/backend/
+/backend/css/
+/backend/js/
+/backend/postman/
+/backend/*.html
+/backend/ROOT.war
+/backend/Dockerfile
+/backend/README.md
+/backend/.gitignore
+/backend/*.code-workspace
