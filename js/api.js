@@ -1,4 +1,8 @@
-const API_BASE = "http://localhost:8080/api";
+// Production (Railway): frontend + backend are served from the same origin, so use a relative `/api`.
+// Local dev: keep the explicit Jetty URL to avoid cross-port issues when using a separate static server.
+const API_BASE = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+  ? "http://127.0.0.1:8080/api"
+  : "/api";
 
 function authHeaders() {
     const token = localStorage.getItem("token");

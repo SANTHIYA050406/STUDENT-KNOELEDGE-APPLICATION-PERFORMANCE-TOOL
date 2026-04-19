@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Students Progress</title>
+  <link rel="stylesheet" href="css/hcare.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">H</div>
+        <div>
+          <strong>SKAPT</strong>
+          <small>Student Hub</small>
+        </div>
+      </div>
+      <nav>
+        <button class="nav-link" onclick="window.location.href='dashboard.html'">Dashboard</button>
+        <button class="nav-link active" onclick="window.location.href='students_progress.html'">Student Progress</button>
+        <button class="nav-link" onclick="window.location.href='competition_report.html'">Competition Report</button>
+        <button class="nav-link" onclick="window.location.href='academics_report.html'">Academics Report</button>
+        <button class="nav-link" onclick="window.location.href='certifications.html'">Certifications</button>
+      </nav>
+      <div class="sidebar-cta">
+        <strong>Tip</strong>
+        <p>Keep your CGPA updated to unlock better insights.</p>
+        <a href="mailto:support@studenttool.com">Ask support</a>
+      </div>
+    </aside>
+    <div class="content">
+      <header class="top-bar">
+        <div class="title-block">
+          <p class="eyebrow">Student portal</p>
+          <h2 id="welcomeText">Students Progress</h2>
+        </div>
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="search" placeholder="Search achievements, tests, or peers" />
+        </div>
+        <div class="actions">
+          <div class="notification-area">
+            <button id="notificationBellButton" class="notification-bell" type="button" onclick="toggleNotificationPanel()" aria-label="Notifications">
+              <span class="bell-icon">🔔</span>
+              <span id="notificationCount" class="notification-count"></span>
+            </button>
+            <div id="notificationPanel" class="notification-panel">
+              <div class="notification-panel-header">
+                <span>Notifications</span>
+                <button type="button" class="notification-clear" onclick="clearNotifications()">Clear All</button>
+              </div>
+              <div id="notificationList" class="notification-items"></div>
+            </div>
+          </div>
+          <button type="button" class="pill" onclick="logout()">Logout</button>
+        </div>
+      </header>
+      <div class="container">
+        <section class="page active">
+        <div class="row">
+          <div class="card" style="width:100%;">
+            <h3>Top achievers in your year</h3>
+            <p class="muted">We automatically highlight the highest-scoring student for your current year and compare CGPA, uploaded certificates, competition entries, and an aggregated achievement score.</p>
+            <div class="chart-wrap">
+              <canvas id="progressChart"></canvas>
+            </div>
+            <div>
+              <h3 id="topListTitle">Top students</h3>
+              <div id="topStudentsList" class="top-list"></div>
+            </div>
+          </div>
+        </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    let user = AppStore.getState().user || JSON.parse(localStorage.getItem("currentUser") || "null");
+
+    async function ensureStudentSession() {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        window.location.href = "index2.html";
+        return false;
+      }
+
+      try {
+        const meRes = await Api.me();
+        if (meRes && meRes.user) {
+          user = meRes.user;
+          if (user.role !== "student") {
+            window.location.href = "admin_dashboard.html";
+            return false;
+          }
+          AppStore.setAuth(user, token);
+          localStorage.setItem("currentUser", JSON.stringify(user));
+        }
+        return true;
+      } catch (err) {
+        const msg = String(err.message || "").toLowerCase();
+        if (msg.includes("token") || msg.includes("authorization") || msg.includes("401")) {
+          AppStore.clearAuth();
+          window.location.href = "index2.html";
+          return false;
+        }
+        alert(err.message || "Failed to validate session.");
+        return false;
+      }
+    }
+
+    const notificationBellButton = document.getElementById("notificationBellButton");
+    const notificationPanel = document.getElementById("notificationPanel");
+    const notificationCount = document.getElementById("notificationCount");
+    const notificationList = document.getElementById("notificationList");
+    const welcomeText = document.getElementById("welcomeText");
+    const chartCanvas = document.getElementById("progressChart");
+    const topStudentsList = document.getElementById("topStudentsList");
+    const topListTitle = document.getElementById("topListTitle");
+
+    let progressChart = null;
+
+    const colorPalette = {
+      top: "#16a34a",
+      you: "#2563eb"
+    };
+
+    welcomeText.innerText = `Student Progress • ${(user.studentProfile?.name || user.username)}`;
+
+    function getMyNotifications() {
+      const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+      return notes.filter(n => n.toUsername === user.username && !n.read).sort((a,b)=>b.id-a.id);
+    }
+
+    function renderNotificationPanel() {
+      const notifications = getMyNotifications();
+      if (!notifications.length) {
+        notificationList.innerHTML = '<p class="muted" style="padding:12px 16px;">No notifications yet.</p>';
+        notificationCount.style.display = "none";
+        return;
+      }
+      notificationCount.innerText = notifications.length;
+      notificationCount.style.display = "inline";
+      notificationList.innerHTML = notifications.map(n => `
+        <div class="notification-item">
+          <strong>${n.fromUsername} (${n.fromRole})</strong>
+          <p style="margin:0;">${n.message}</p>
+          <span>${n.createdAt || ""}</span>
+          <button class="ghost-action" onclick="markNotificationAsRead(${n.id})">Mark read</button>
+        </div>
+      `).join("");
+    }
+
+    function toggleNotificationPanel() {
+      notificationPanel.classList.toggle("open");
+      if (notificationPanel.classList.contains("open")) {
+        renderNotificationPanel();
+      }
+    }
+
+    function markNotificationAsRead(id) {
+      const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
+      const updated = notes.map(note => note.id === id ? { ...note, read: true } : note);
+      localStorage.setItem("dashboardNotifications", JSON.stringify(updated));
+      renderNotificationPanel();
+    }
+
+    function clearNotifications() {
+      const remaining = (JSON.parse(localStorage.getItem("dashboardNotifications")) || [])
+        .filter(n => n.toUsername !== user.username);
+      localStorage.setItem("dashboardNotifications", JSON.stringify(remaining));
+      renderNotificationPanel();
+    }
+
+    document.addEventListener("click", event => {
+      if (!notificationPanel.contains(event.target) && !notificationBellButton.contains(event.target)) {
+        notificationPanel.classList.remove("open");
+      }
+    });
+    window.addEventListener("storage", event => {
+      if (event.key === "dashboardNotifications") {
+        renderNotificationPanel();
+      }
+    });
+
+    function logout() {
+      AppStore.clearAuth();
+      window.location.href = "index.html";
+    }
+
+    function normalizeToScale(value, max) {
+      if (!max || max <= 0) return 0;
+      return Math.min(10, (value / max) * 10);
+    }
+
+    function hexToRgba(hex, alpha = 1) {
+      const sanitized = hex.replace("#", "");
+      const bigint = parseInt(sanitized, 16);
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function renderEmptyState() {
+      const ctx = chartCanvas.getContext("2d");
+      ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+      topStudentsList.innerHTML = "<p class='muted'>No student progress data available yet.</p>";
+      topListTitle.innerText = "Top students";
+    }
+
+    const metricDefinitions = [
+      { key: "cgpa", label: "CGPA", decimals: 2 },
+      { key: "certCount", label: "Certificates" },
+      { key: "competitionCount", label: "Competition Entries" },
+      { key: "achievementScore", label: "Achievement Score" }
+    ];
+
+    function formatMetricValue(key, value) {
+      if (key === "cgpa") return value.toFixed(2);
+      return Math.round(value);
+    }
+
+    function renderTopList(topMetrics, userMetrics, year) {
+      const yearLabel = year ? `Year ${year}` : "Year –";
+      topListTitle.innerText = `Top scorer stats vs you — ${yearLabel}`;
+      const topValues = topMetrics || {};
+      const youValues = userMetrics || {};
+      topStudentsList.innerHTML = metricDefinitions.map(def => `
+        <article class="top-card">
+          <h4>${def.label}</h4>
+          <p>Top: ${formatMetricValue(def.key, topValues[def.key] ?? 0)} | You: ${formatMetricValue(def.key, youValues[def.key] ?? 0)}</p>
+        </article>
+      `).join("");
+    }
+
+    function renderChart(topMetrics, userMetrics) {
+      if (!topMetrics && !userMetrics) {
+        if (progressChart) {
+          progressChart.destroy();
+          progressChart = null;
+        }
+        return;
+      }
+      const metrics = metricDefinitions;
+      const maxCert = Math.max(topMetrics?.certCount ?? 1, userMetrics?.certCount ?? 0, 1);
+      const maxComp = Math.max(topMetrics?.competitionCount ?? 1, userMetrics?.competitionCount ?? 0, 1);
+      const maxAchievement = Math.max(topMetrics?.achievementScore ?? 1, userMetrics?.achievementScore ?? 0, 1);
+
+      const normalizeForKey = (key, value) => {
+        if (key === "cgpa") return Math.min(value ?? 0, 10);
+        if (key === "certCount") return normalizeToScale(value ?? 0, maxCert);
+        if (key === "competitionCount") return normalizeToScale(value ?? 0, maxComp);
+        if (key === "achievementScore") return normalizeToScale(value ?? 0, maxAchievement);
+        return value ?? 0;
+      };
+
+      const topData = metrics.map(def => normalizeForKey(def.key, topMetrics?.[def.key]));
+      const userData = metrics.map(def => normalizeForKey(def.key, userMetrics?.[def.key]));
+
+      const datasets = [
+        {
+          label: "Top scorer",
+          data: topData,
+          backgroundColor: hexToRgba(colorPalette.top, 0.65),
+          borderColor: colorPalette.top,
+          borderWidth: 1,
+          borderRadius: 6
+        },
+        {
+          label: "You",
+          data: userData,
+          backgroundColor: hexToRgba(colorPalette.you, 0.65),
+          borderColor: colorPalette.you,
+          borderWidth: 1,
+          borderRadius: 6
+        }
+      ];
+
+      const config = {
+        type: "bar",
+        data: {
+          labels: metrics.map(def => def.label),
+          datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 10,
+              ticks: { stepSize: 2 }
+            }
+          },
+          plugins: {
+            legend: {
+              position: "bottom"
+            },
+            tooltip: {
+              callbacks: {
+                label(context) {
+                  return `${context.dataset.label}: ${context.formattedValue}`;
+                }
+              }
+            }
+          }
+        }
+      };
+
+      if (progressChart) {
+        progressChart.destroy();
+      }
+      progressChart = new Chart(chartCanvas, config);
+    }
+
+    async function fetchTopScorers(year) {
+      try {
+        const payload = await Api.getTopScorers(year);
+        return payload?.topMetrics ?? null;
+      } catch (err) {
+        console.error("Failed to load top scorers:", err);
+        return null;
+      }
+    }
+
+    async function fetchUserDocuments() {
+      const [certsRes, compsRes] = await Promise.all([
+        Api.getCertificationDocuments(user.username),
+        Api.getCompetitionDocuments(user.username)
+      ]);
+      return {
+        certifications: certsRes.documents || [],
+        competitions: compsRes.documents || []
+      };
+    }
+
+    function createBaselineEntry() {
+      const profile = user.studentProfile || {};
+      return {
+        username: user.username,
+        displayName: profile.name || user.username,
+        year: Number(profile.yearOfStudy) || null,
+        cgpa: Number(profile.cgpa) || 0,
+        certCount: 0,
+        competitionCount: 0,
+        achievementScore: 0
+      };
+    }
+
+    function computeUserCelebrations(entry, docs) {
+      const certCount = (docs.certifications || []).filter(d => String(d.reviewStatus || "pending").toLowerCase() === "approved").length;
+      const competitionCount = (docs.competitions || []).filter(d => String(d.reviewStatus || "pending").toLowerCase() === "approved").length;
+      entry.certCount = certCount;
+      entry.competitionCount = competitionCount;
+      entry.achievementScore = certCount + competitionCount + (entry.cgpa || 0);
+    }
+
+    async function initProgressView() {
+      const year = Number(user.studentProfile?.yearOfStudy) || 1;
+      if (!year) {
+        renderEmptyState();
+        return;
+      }
+      const [topScorers, userDocs] = await Promise.all([
+        fetchTopScorers(year),
+        fetchUserDocuments()
+      ]);
+      const topMetrics = topScorers;
+      const userMetrics = createBaselineEntry();
+      computeUserCelebrations(userMetrics, userDocs);
+      renderTopList(topMetrics, userMetrics, year);
+      renderChart(topMetrics, userMetrics);
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      const ok = await ensureStudentSession();
+      if (!ok) return;
+      renderNotificationPanel();
+      initProgressView();
+    });
+  </script>
+</body>
+</html>

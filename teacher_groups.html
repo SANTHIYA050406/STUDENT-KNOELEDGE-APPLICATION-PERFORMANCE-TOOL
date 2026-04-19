@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Teacher Groups</title>
   <link rel="stylesheet" href="css/hcare.css">
+  <style>
+    .top-bar .search-box {
+      display: none;
+    }
+  </style>
 </head>
 <body>
   <div class="app-shell">
@@ -58,13 +63,13 @@
       </header>
 
       <div class="container">
-        <section class="panel">
+        <section class="panel teacher-groups-scroll-panel teacher-groups-create-panel">
         <h3>Create a new Group</h3>
         <p class="muted">Name the group, describe it, and add the students that have accepted your connect requests.</p>
         <div class="grid">
           <input id="groupNameInput" placeholder="Group name e.g. CSE - Batch A" />
           <textarea id="groupDescription" placeholder="Brief description (optional)"></textarea>
-          <div id="groupMembersChecklist" class="members-checklist" aria-label="Accepted students checklist"></div>
+          <div id="groupMembersChecklist" class="members-checklist teacher-groups-scroll-area" aria-label="Accepted students checklist"></div>
         </div>
         <div id="selectedMembersList" class="selected-members-list">
           <p class="selected-members-note">Pick students from the list above to add them to this group.</p>
@@ -72,7 +77,7 @@
         <button onclick="createGroup()">Create Group</button>
       </section>
 
-      <section class="panel">
+      <section class="panel teacher-groups-scroll-panel">
         <h3>Request Student to Join</h3>
         <p class="muted">Use roll number or username to invite students into the named group.</p>
         <div class="grid">
@@ -87,7 +92,7 @@
           <h3>My Groups</h3>
           <span id="groupCount" class="muted"></span>
         </div>
-        <div id="groupsList" class="groups-list"></div>
+        <div id="groupsList" class="groups-list teacher-groups-scroll-area"></div>
       </section>
 
       <section class="panel" id="studentDetailPanel">
@@ -634,4 +639,3 @@
 </script>
 </body>
 </html>
-

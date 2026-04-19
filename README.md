@@ -15,6 +15,20 @@
    - `mvn jetty:run`
 4. API base URL: `http://localhost:8080/api`
 
+## Deploy To Railway (Dockerfile)
+This repo includes a root `Dockerfile` that builds the `backend` WAR and runs it on Jetty.
+
+1. Push your code to GitHub (Railway deploys from a repo/branch).
+2. Railway: create a **New Project** → **Deploy from GitHub Repo** → select this repo/branch.
+3. Add a MySQL database service to the same Railway project.
+4. In your app service → **Variables**, set:
+   - `DB_URL` = `{{MySQL.MYSQL_URL}}`
+   - `DB_USERNAME` = `{{MySQL.MYSQLUSER}}`
+   - `DB_PASSWORD` = `{{MySQL.MYSQLPASSWORD}}`
+   - `JWT_SECRET` = a strong secret (32+ characters)
+5. Deploy. Then in the app service → **Settings/Networking**, generate a public domain.
+6. Open the domain. The UI is served from the same app, so API calls go to `/api`.
+
 ## Frontend Setup
 1. Serve project root with any static server (Live Server is fine).
 2. Open `index.html`.

@@ -173,17 +173,78 @@
     return getTeacherRequests().filter(r => r.status === "accepted");
   }
 
+  function getTeacherGroups() {
+    const allGroups = JSON.parse(localStorage.getItem("teacherGroupsData") || "[]");
+    return allGroups.filter(g => String(g.teacherId) === String(user.id) || g.teacherUsername === user.username);
+  }
+
+  function findStudentRecord(identifier) {
+    const needle = (identifier || "").trim().toLowerCase();
+    if (!needle) return null;
+    return students.find(s => {
+      const username = (s.username || "").trim().toLowerCase();
+      const rollNo = (s.studentProfile?.rollNo || "").trim().toLowerCase();
+      return username === needle || rollNo === needle;
+    }) || null;
+  }
+
+  function getConnectedStudents() {
+    const entries = new Map();
+
+    function upsert(candidate) {
+      if (!candidate) return;
+      const username = (candidate.username || "").trim();
+      const rollNo = (candidate.rollNo || "").trim();
+      const key = (username || rollNo).toLowerCase();
+      if (!key) return;
+
+      const existing = entries.get(key) || {};
+      entries.set(key, {
+        key,
+        username: username || existing.username || "",
+        rollNo: rollNo || existing.rollNo || "",
+        name: candidate.name || existing.name || "",
+        studentId: candidate.studentId || existing.studentId || ""
+      });
+    }
+
+    getAcceptedRequests().forEach(req => {
+      const matched = findStudentRecord(req.studentUsername || req.studentRollNo);
+      upsert({
+        username: matched?.username || req.studentUsername || "",
+        rollNo: matched?.studentProfile?.rollNo || req.studentRollNo || "",
+        name: matched?.studentProfile?.name || req.studentName || "",
+        studentId: matched?.id || req.studentId || ""
+      });
+    });
+
+    getTeacherGroups().forEach(group => {
+      (group.members || []).forEach(member => {
+        const matched = findStudentRecord(member);
+        upsert({
+          username: matched?.username || member || "",
+          rollNo: matched?.studentProfile?.rollNo || "",
+          name: matched?.studentProfile?.name || "",
+          studentId: matched?.id || ""
+        });
+      });
+    });
+
+    return Array.from(entries.values()).filter(student => student.username || student.rollNo);
+  }
+
   function refreshDashboard() {
     const teacherRequests = getTeacherRequests();
     const accepted = getAcceptedRequests();
-    const acceptedUsernames = [...new Set(accepted.map(r => r.studentUsername))];
+    const connectedStudents = getConnectedStudents();
+    const connectedUsernames = connectedStudents.map(s => s.username).filter(Boolean);
 
     const myTests = tests.filter(t => Number(t.createdBy) === Number(user.id) || user.role === "admin");
     const myTestIds = new Set(myTests.map(t => Number(t.id)));
 
     document.getElementById("totalTestsCreated").innerText = myTests.length;
     document.getElementById("totalTestsAttempted").innerText = results.filter(r => myTestIds.has(Number(r.testId))).length;
-    document.getElementById("connectedStudents").innerText = acceptedUsernames.length;
+    document.getElementById("connectedStudents").innerText = connectedUsernames.length;
 
     const pendingBody = document.querySelector("#pendingRequestsTable tbody");
     pendingBody.innerHTML = teacherRequests.length
@@ -191,13 +252,16 @@
       : '<tr><td colspan="5">No requests yet.</td></tr>';
 
     renderGroups(accepted);
-    renderSelectors(accepted);
-    renderResults(acceptedUsernames);
+    renderSelectors(connectedStudents);
+    renderResults(connectedUsernames);
     renderFeedbackSentTable();
     renderNotificationPanel();
   }
 
   function renderGroups(accepted) {
+    const container = document.getElementById("teacherGroupsContainer");
+    if (!container) return;
+
     const byGroup = {};
     accepted.forEach(r => {
       const group = r.groupName || "General";
@@ -205,7 +269,6 @@
       byGroup[group].push(r);
     });
 
-    const container = document.getElementById("teacherGroupsContainer");
     const groups = Object.keys(byGroup);
     if (!groups.length) {
       container.innerHTML = '<p class="muted">No accepted students in groups.</p>';
@@ -223,12 +286,15 @@
     }).join("");
   }
 
-  function renderSelectors(accepted) {
-    const usernames = [...new Set(accepted.map(r => r.studentUsername))];
-    const options = usernames.length
-      ? usernames.map(u => {
-          const stu = studentByUsername(u);
-          return `<option value="${u}">${stu?.studentProfile?.name || u} (${u})</option>`;
+  function renderSelectors(connectedStudents) {
+    const options = connectedStudents.length
+      ? connectedStudents.map(student => {
+          const value = student.username || student.rollNo;
+          const name = student.name || student.username || student.rollNo;
+          const meta = student.username && student.rollNo
+            ? `${student.username} / ${student.rollNo}`
+            : (student.username || student.rollNo || "");
+          return `<option value="${value}">${name}${meta ? ` (${meta})` : ""}</option>`;
         }).join("")
       : '<option value="">No accepted students</option>';
 
@@ -273,7 +339,9 @@
   }
 
   function sendNotificationToStudent() {
-    const toUsername = document.getElementById("notifyStudentSelect").value;
+    const selectedValue = document.getElementById("notifyStudentSelect").value;
+    const matchedStudent = findStudentRecord(selectedValue);
+    const toUsername = matchedStudent?.username || selectedValue;
     const message = document.getElementById("teacherNotificationMsg").value.trim();
     if (!toUsername) { alert("No connected student selected."); return; }
     if (!message) { alert("Notification message is required."); return; }
@@ -286,12 +354,16 @@
   }
 
   function sendFeedbackToStudent() {
-    const toUsername = document.getElementById("feedbackStudentSelect").value;
+    const selectedValue = document.getElementById("feedbackStudentSelect").value;
+    const matchedStudent = findStudentRecord(selectedValue);
+    const toUsername = matchedStudent?.username || selectedValue;
     const message = document.getElementById("feedbackTemplate").value;
     if (!toUsername) { alert("No connected student selected."); return; }
 
+    const student = matchedStudent || studentByUsername(toUsername);
+    const toName = student?.studentProfile?.name || toUsername;
     const feedbacks = JSON.parse(localStorage.getItem("studentFeedbackMessages")) || [];
-    feedbacks.push({ id: Date.now(), fromUsername: user.username, fromRole: "teacher", toUsername, message, createdAt: new Date().toLocaleString() });
+    feedbacks.push({ id: Date.now(), fromUsername: user.username, fromRole: "teacher", toUsername, toName, message, createdAt: new Date().toLocaleString() });
     localStorage.setItem("studentFeedbackMessages", JSON.stringify(feedbacks));
     renderFeedbackSentTable();
     alert("Feedback sent.");
@@ -302,7 +374,11 @@
     const mine = feedbacks.filter(f => f.fromUsername === user.username).sort((a, b) => b.id - a.id);
     const body = document.querySelector("#teacherFeedbackTable tbody");
     body.innerHTML = mine.length
-      ? mine.map(f => `<tr><td>${f.toUsername}</td><td>${f.message}</td><td>${f.createdAt}</td></tr>`).join("")
+      ? mine.map(f => {
+          const student = studentByUsername(f.toUsername);
+          const displayName = f.toName || student?.studentProfile?.name || f.toUsername;
+          return `<tr><td>${displayName}</td><td>${f.message}</td><td>${f.createdAt}</td></tr>`;
+        }).join("")
       : '<tr><td colspan="3">No feedback sent yet.</td></tr>';
   }
 
@@ -383,6 +459,9 @@
     if (event.key === "dashboardNotifications") {
       renderNotificationPanel();
     }
+    if (event.key === "studentGroupRequests" || event.key === "teacherGroupsData") {
+      refreshDashboard();
+    }
   });
 
   function openStudentDetails(studentUsername) {
@@ -433,10 +512,6 @@
 </script>
 </body>
 </html>
-
-
-
-
 
 
 

@@ -353,6 +353,26 @@ button.ghost:hover {
   transition: all 0.2s ease;
 }
 
+.teacher-groups-scroll-panel {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.teacher-groups-create-panel {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.teacher-groups-scroll-area {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+#groupsList.teacher-groups-scroll-area {
+  max-height: 360px;
+  padding-right: 6px;
+}
+
 .panel:hover {
   box-shadow: 0 30px 60px rgba(15, 23, 42, 0.12);
   transform: translateY(-2px);

@@ -20,7 +20,21 @@ public final class AppConfig {
     private AppConfig() {}
 
     public static String get(String key) {
-        String value = PROPS.getProperty(key);
+        // Prefer runtime overrides (Railway variables / JVM system props) over bundled defaults.
+        // Example mappings:
+        //   db.url -> DB_URL
+        //   jwt.secret -> JWT_SECRET
+        String sys = System.getProperty(key);
+        if (sys != null && !sys.isBlank()) {
+            return sys;
+        }
+
+        String envKey = key.toUpperCase().replace('.', '_');
+        String env = System.getenv(envKey);
+        if (env == null || env.isBlank()) {
+            env = System.getenv(key);
+        }
+        String value = (env != null && !env.isBlank()) ? env : PROPS.getProperty(key);
         if (value == null || value.isBlank()) {
             throw new IllegalStateException("Missing config key: " + key);
         }
