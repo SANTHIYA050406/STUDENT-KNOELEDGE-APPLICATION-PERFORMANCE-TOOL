@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Knowledge Application Performance Tool - Login</title>
+  <style>
+    :root {
+      --base-dark: #0f172a;
+      --base-light: #f0f4ff;
+      --glass: rgba(255, 255, 255, 0.9);
+      --muted: #6b7280;
+      --accent-1: #6f5af8;
+      --accent-2: #34d399;
+      --stroke: rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(circle at 10% 10%, #c5e4ff 0, transparent 35%),
+        radial-gradient(circle at 90% 0%, #d5f6ff 0, transparent 45%),
+        linear-gradient(145deg, #0f172a, #1d2b57 60%);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 24px;
+      color: #0b1220;
+      overflow-y: auto;
+    }
+
+    .card {
+      width: min(960px, 100%);
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 32px;
+      box-shadow: 0 35px 70px rgba(15, 23, 42, 0.35);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      overflow: visible;
+      gap: 0;
+    }
+
+    .panel {
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 100vh;
+      overflow-y: auto;
+    }
+
+    .login-panel {
+      background: #ffffff;
+      gap: 18px;
+      min-height: auto;
+    }
+
+    .info-panel {
+      background: radial-gradient(circle at top, rgba(111, 90, 248, 0.3), transparent 70%),
+        linear-gradient(180deg, #5b5fef, #3b82f6);
+      color: #fefefe;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(32px, 3vw, 44px);
+      line-height: 1.2;
+    }
+
+    label {
+      font-weight: 600;
+      color: #0b1220;
+      font-size: 14px;
+    }
+
+    .subtext {
+      color: #475569;
+      font-size: 15px;
+      margin-top: -4px;
+      line-height: 1.4;
+    }
+
+    input,
+    select,
+    button {
+      border-radius: 16px;
+      border: 1px solid var(--stroke);
+      padding: 14px 16px;
+      font-size: 15px;
+      font-family: inherit;
+      width: 100%;
+    }
+
+    .setup-box input,
+    .setup-box select {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--accent-1);
+      box-shadow: 0 0 0 3px rgba(111, 90, 248, 0.25);
+    }
+
+    button {
+      border: none;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      color: white;
+      cursor: pointer;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      width: 100%;
+    }
+
+    button:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .ghost {
+      background: rgba(79, 70, 229, 0.1);
+      color: #312e81;
+      border: 1px solid rgba(79, 70, 229, 0.3);
+    }
+
+    .primary {
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    }
+
+    .pw-wrap {
+      position: relative;
+    }
+
+    .pw-wrap input {
+      padding-right: 56px;
+    }
+
+    .pw-toggle {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: none;
+      background: rgba(15, 23, 42, 0.08);
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+
+    .microcopy {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .microcopy span {
+      color: var(--muted);
+    }
+
+    .microcopy a {
+      color: #312e81;
+      text-decoration: none;
+    }
+
+    .setup-box {
+      border: 1px solid rgba(111, 90, 248, 0.2);
+      border-radius: 16px;
+      padding: 24px;
+      background: #f8fafc;
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      clear: both;
+      width: 100%;
+    }
+
+    .setup-box h2 {
+      margin: 0 0 8px 0;
+      font-size: 18px;
+      color: #0b1220;
+    }
+
+    .setup-box p {
+      margin: 0 0 12px 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      width: 100%;
+    }
+
+    @media (min-width: 600px) {
+      .form-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .profile {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.3);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .feature-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: white;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .stats div {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stats strong {
+      font-size: 28px;
+      display: block;
+      margin-top: 4px;
+    }
+
+    .eyebrow {
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .info-panel h3 {
+      margin: 4px 0 0;
+    }
+
+    .muted {
+      color: rgba(255, 255, 255, 0.8);
+      margin: 0;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 768px) {
+      .panel {
+        padding: 32px 24px;
+      }
+
+      .stats {
+        flex-direction: column;
+      }
+
+      .card {
+        grid-template-columns: 1fr;
+      }
+
+      .info-panel {
+        display: none;
+      }
+
+      body {
+        align-items: flex-start;
+        padding: 16px;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .setup-box {
+        padding: 20px;
+        margin-top: 16px;
+        gap: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="panel login-panel">
+      <p class="eyebrow">Get started</p>
+      <h1>Join <br>SKAPT</h1>
+      <p class="subtext">
+        Create your account and complete your profile to access real-time insights and assignments.
+      </p>
+
+      <label for="username">Username</label>
+      <input type="text" id="username" placeholder="Enter username" />
+
+      <label for="password">Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="password" placeholder="••••••••" />
+        <button type="button" class="pw-toggle" id="togglePassword" aria-label="Show password">
+          <span>👁</span>
+        </button>
+      </div>
+
+      <label for="role">I am a</label>
+      <select id="role">
+        <option value="student">Student</option>
+        <option value="teacher">Teacher</option>
+      </select>
+
+      <button id="loginBtn" class="primary">Create Account</button>
+      <button class="ghost">Continue with Google</button>
+
+      <div class="microcopy">
+        <a href="index2.html">Already have an account? Sign in</a>
+        <span>&bull;</span>
+        <a href="#">Need help?</a>
+      </div>
+
+      <div id="studentSetup" class="setup-box hidden">
+        <h2>Student First-Time Setup</h2>
+        <p>Tell us a little about you.</p>
+        <div class="form-grid">
+          <input type="text" id="studentName" placeholder="Name" />
+          <input type="text" id="studentRollNo" placeholder="Roll No" />
+          <select id="studentDepartment">
+            <option value="">Department</option>
+            <option value="CSE">CSE - Computer Science and Engineering</option>
+            <option value="CT">CT - Computer Technology</option>
+            <option value="ECE">ECE - Electronics and Communication Engineering</option>
+            <option value="EEE">EEE - Electrical and Electronics Engineering</option>
+            <option value="ME">ME - Mechanical Engineering</option>
+            <option value="CE">CE - Civil Engineering</option>
+            <option value="AE">AE - Aeronautical Engineering</option>
+            <option value="BE">BE - Biomedical Engineering</option>
+            <option value="IE">IE - Industrial Engineering</option>
+            <option value="CE2">CE - Chemical Engineering</option>
+            <option value="IT">IT - Information Technology</option>
+            <option value="AIML">AIML - Artificial Intelligence and Machine Learning</option>
+            <option value="AIDS">AIDS - Artificial Intelligence and Data Science</option>
+            <option value="CSBS">CSBS - Computer Science and Business Systems</option>
+            <option value="SE">SE - Software Engineering</option>
+          </select>
+          <input type="number" id="studentYearOfStudy" placeholder="Year of study" min="1" max="4" />
+          <input type="number" id="studentCgpa" placeholder="CGPA" min="0" max="10" step="0.01" />
+        </div>
+        <button id="saveStudentBtn" class="primary">Save student profile</button>
+      </div>
+
+      <div id="teacherSetup" class="setup-box hidden">
+        <h2>Teacher First-Time Setup</h2>
+        <p>Complete your profile to unlock dashboards.</p>
+        <div class="form-grid">
+          <input type="text" id="teacherName" placeholder="Name" />
+          <input type="text" id="facultyId" placeholder="Faculty ID" />
+          <select id="teacherDepartment">
+            <option value="">Department</option>
+            <option value="CSE">CSE - Computer Science and Engineering</option>
+            <option value="CT">CT - Computer Technology</option>
+            <option value="ECE">ECE - Electronics and Communication Engineering</option>
+            <option value="EEE">EEE - Electrical and Electronics Engineering</option>
+            <option value="ME">ME - Mechanical Engineering</option>
+            <option value="CE">CE - Civil Engineering</option>
+            <option value="AE">AE - Aeronautical Engineering</option>
+            <option value="BE">BE - Biomedical Engineering</option>
+            <option value="IE">IE - Industrial Engineering</option>
+            <option value="CE2">CE - Chemical Engineering</option>
+            <option value="IT">IT - Information Technology</option>
+            <option value="AIML">AIML - Artificial Intelligence and Machine Learning</option>
+            <option value="AIDS">AIDS - Artificial Intelligence and Data Science</option>
+            <option value="CSBS">CSBS - Computer Science and Business Systems</option>
+            <option value="SE">SE - Software Engineering</option>
+          </select>
+        </div>
+        <button id="saveTeacherBtn" class="primary">Save teacher profile</button>
+      </div>
+    </div>
+
+    <div class="panel info-panel">
+      <div class="profile">
+        <div class="avatar">JD</div>
+        <div>
+          <p class="eyebrow">Latest insight</p>
+          <h3>Smart Learning Hub</h3>
+          <p class="muted">john.doe@college.edu</p>
+        </div>
+      </div>
+
+      <ul class="feature-list">
+        <li>
+          <span class="dot"></span>
+          Live attendance + performance
+        </li>
+        <li>
+          <span class="dot"></span>
+          Secure checkout &amp; approvals
+        </li>
+        <li>
+          <span class="dot"></span>
+          Personalized tracking cards
+        </li>
+      </ul>
+
+      <div class="stats">
+        <div>
+          <p class="eyebrow">Active tests</p>
+          <strong>12</strong>
+        </div>
+        <div>
+          <p class="eyebrow">Completion rate</p>
+          <strong>94%</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/store.js"></script>
+<script src="js/api.js"></script>
+<script>
+  const loginBtn = document.getElementById("loginBtn");
+  const saveStudentBtn = document.getElementById("saveStudentBtn");
+  const saveTeacherBtn = document.getElementById("saveTeacherBtn");
+
+  const studentSetup = document.getElementById("studentSetup");
+  const teacherSetup = document.getElementById("teacherSetup");
+  const togglePassword = document.getElementById("togglePassword");
+
+  let pendingUser = null;
+  let pendingRole = null;
+
+  togglePassword.addEventListener("click", () => {
+    const input = document.getElementById("password");
+    const showing = input.type === "text";
+    input.type = showing ? "password" : "text";
+    togglePassword.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+  });
+
+  function showStudentSetup(user) {
+    teacherSetup.classList.add("hidden");
+    studentSetup.classList.remove("hidden");
+    document.getElementById("studentName").value = user?.studentProfile?.name || user?.username || "";
+    document.getElementById("studentRollNo").value = user?.studentProfile?.rollNo || "";
+    document.getElementById("studentDepartment").value = user?.studentProfile?.department || "";
+    document.getElementById("studentYearOfStudy").value = user?.studentProfile?.yearOfStudy ?? "";
+    document.getElementById("studentCgpa").value = user?.studentProfile?.cgpa ?? "";
+  }
+
+  function showTeacherSetup(user) {
+    studentSetup.classList.add("hidden");
+    teacherSetup.classList.remove("hidden");
+    document.getElementById("teacherName").value = user?.teacherProfile?.name || user?.username || "";
+    document.getElementById("facultyId").value = user?.teacherProfile?.facultyId || "";
+    document.getElementById("teacherDepartment").value = user?.teacherProfile?.department || "";
+  }
+
+  async function loginExisting(username, password, expectedRole) {
+    const { token, user } = await Api.login({ username, password });
+
+    if (expectedRole === "student" && user.role !== "student") {
+      throw new Error("This account is not a student account.");
+    }
+    if (expectedRole === "teacher" && !(user.role === "teacher" || user.role === "admin")) {
+      throw new Error("This account is not a teacher account.");
+    }
+
+    AppStore.setAuth(user, token);
+    window.location.href = expectedRole === "teacher" ? "admin_dashboard.html" : "dashboard.html";
+  }
+
+  loginBtn.addEventListener("click", async () => {
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const role = document.getElementById("role").value;
+
+    if (!username || !password) {
+      alert("Enter username and password.");
+      return;
+    }
+    if (username.length < 3) {
+      alert("Username must be at least 3 characters.");
+      return;
+    }
+    if (password.length < 6) {
+      alert("Password must be at least 6 characters.");
+      return;
+    }
+
+    try {
+      await loginExisting(username, password, role);
+      return;
+    } catch (err) {
+      const msg = String(err.message || "");
+      if (!msg.toLowerCase().includes("invalid credentials")) {
+        alert(msg);
+        return;
+      }
+    }
+
+    pendingUser = { username, password };
+    pendingRole = role;
+    if (role === "student") {
+      showStudentSetup({ username });
+    } else {
+      showTeacherSetup({ username });
+    }
+  });
+
+  saveStudentBtn.addEventListener("click", async () => {
+    if (!pendingUser || pendingRole !== "student") return;
+
+    const studentProfile = {
+      name: document.getElementById("studentName").value.trim(),
+      rollNo: document.getElementById("studentRollNo").value.trim(),
+      department: document.getElementById("studentDepartment").value.trim(),
+      yearOfStudy: Number(document.getElementById("studentYearOfStudy").value),
+      cgpa: Number(document.getElementById("studentCgpa").value)
+    };
+
+    if (!studentProfile.name || !studentProfile.rollNo || !studentProfile.department) {
+      alert("Enter name, roll number, and department.");
+      return;
+    }
+    if (!Number.isInteger(studentProfile.yearOfStudy) || studentProfile.yearOfStudy < 1 || studentProfile.yearOfStudy > 4) {
+      alert("Enter a valid year of study between 1 and 4.");
+      return;
+    }
+    if (Number.isNaN(studentProfile.cgpa) || studentProfile.cgpa < 0 || studentProfile.cgpa > 10) {
+      alert("Enter a CGPA between 0 and 10.");
+      return;
+    }
+
+    try {
+      const { token, user } = await Api.register({
+        username: pendingUser.username,
+        password: pendingUser.password,
+        role: "student",
+        studentProfile
+      });
+      AppStore.setAuth(user, token);
+      window.location.href = "dashboard.html";
+    } catch (err) {
+      alert(err.message || "Failed to register student.");
+    }
+  });
+
+  saveTeacherBtn.addEventListener("click", async () => {
+    if (!pendingUser || pendingRole !== "teacher") return;
+
+    const teacherProfile = {
+      name: document.getElementById("teacherName").value.trim(),
+      facultyId: document.getElementById("facultyId").value.trim(),
+      department: document.getElementById("teacherDepartment").value.trim()
+    };
+
+    if (!teacherProfile.name || !teacherProfile.facultyId || !teacherProfile.department) {
+      alert("Enter teacher name, faculty ID, and department.");
+      return;
+    }
+
+    try {
+      const { token, user } = await Api.register({
+        username: pendingUser.username,
+        password: pendingUser.password,
+        role: "teacher",
+        teacherProfile
+      });
+      AppStore.setAuth(user, token);
+      window.location.href = "admin_dashboard.html";
+    } catch (err) {
+      alert(err.message || "Failed to register teacher.");
+    }
+  });
+</script>
+</body>
+</html>
+
+
+
