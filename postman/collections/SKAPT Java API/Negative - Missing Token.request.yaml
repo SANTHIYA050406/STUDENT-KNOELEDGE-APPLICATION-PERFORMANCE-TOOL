@@ -1,0 +1,5 @@
+$kind: http-request
+url: "{{baseUrl}}/results"
+method: GET
+order: 24000
+examples: ./.resources\Negative - Missing Token.resources\examples

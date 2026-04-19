@@ -1,3 +1,25 @@
+<<<<<<< HEAD
 target/
 *.log
 *.class
+=======
+# Java / Maven
+backend/target/
+*.class
+*.war
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+
+# Optional tooling
+.postman/
+>>>>>>> 9b203900f9815f09d466df423c8519acb8e7b716

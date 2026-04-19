@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/tests/{{testId}}"
+method: GET
+headers:
+  Authorization: Bearer {{studentToken}}
+order: 8000

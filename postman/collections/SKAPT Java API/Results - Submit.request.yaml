@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/results"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{studentToken}}
+body:
+  type: text
+  content: |-
+    {
+      "testId": {{testId}},
+      "answers": ["A"]
+    }
+order: 10000

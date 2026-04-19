@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "username": "teacher1",
+      "password": "password123",
+      "role": "teacher",
+      "teacherProfile": {
+        "name": "Teacher One",
+        "facultyId": "FAC1001",
+        "department": "CSE"
+      }
+    }
+order: 2000

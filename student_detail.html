@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Detail</title>
+  <style>
+    :root {
+      --bg: #eef3ff;
+      --bg2: #fff7ea;
+      --panel: #fff;
+      --stroke: #d8e3f2;
+      --text: #1f2a3a;
+      --muted: #607086;
+    }
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 14%, #fff2cb 0, #fff2cb 14%, transparent 16%),
+        radial-gradient(circle at 88% 10%, #cff7ef 0, #cff7ef 14%, transparent 16%),
+        linear-gradient(150deg, var(--bg), var(--bg2));
+    }
+    .header {
+      background: linear-gradient(120deg, #1f356c, #115e59);
+      color: #fff;
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 8px 20px rgba(19,37,69,.2);
+    }
+    .header button {
+      padding: 9px 14px;
+      border: 1px solid rgba(255,255,255,.35);
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+      background: rgba(255,255,255,.14);
+    }
+    .container { padding: 22px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      box-shadow: 0 10px 24px rgba(18,33,61,.08);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .card h3 { margin: 0 0 10px; color: #213754; }
+    .muted { margin: 0; color: var(--muted); }
+    .table-wrap {
+      max-height: 220px;
+      overflow-y: auto;
+      overflow-x: auto;
+      border: 1px solid #dce6f3;
+      border-radius: 10px;
+      background: #fbfdff;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { font-size: 13px; padding: 9px; text-align: center; border-bottom: 1px solid #edf2f8; }
+    th { background: linear-gradient(120deg,#365ea7,#2f4f93); color: #fff; position: sticky; top: 0; }
+    .link { color: #163f7b; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2 id="titleText">Student Detail</h2>
+    <button onclick="goBack()">Back</button>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <h3>Student Profile</h3>
+      <p id="profileText" class="muted">Loading...</p>
+    </div>
+
+    <div class="card">
+      <h3>Academic PDFs</h3>
+      <div class="table-wrap"><table id="academicTable"><thead><tr><th>Semester</th><th>File</th><th>PDF</th><th>Updated At</th></tr></thead><tbody></tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h3>Course Certifications</h3>
+      <div class="table-wrap"><table id="certTable"><thead><tr><th>Certification</th><th>Link</th><th>PDF</th><th>Updated At</th></tr></thead><tbody></tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h3>Competition Certifications</h3>
+      <div class="table-wrap"><table id="competitionTable"><thead><tr><th>Competition</th><th>Date</th><th>PDF</th><th>Geo Photos</th><th>Link</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <script src="js/store.js"></script>
+<script src="js/api.js"></script>
+<script>
+  let teacher = AppStore.getState().user || JSON.parse(localStorage.getItem("currentUser") || "null");
+  const selectedStudentUsername = localStorage.getItem("selectedStudentForTeacherView");
+
+  if (!teacher || (teacher.role !== "teacher" && teacher.role !== "admin")) {
+    window.location.href = "index.html";
+  }
+  if (!selectedStudentUsername) {
+    window.location.href = "admin_dashboard.html";
+  }
+
+  const requests = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
+  const hasAccess = requests.some(r =>
+    (String(r.teacherId) === String(teacher.id) || r.teacherUsername === teacher.username) &&
+    r.studentUsername === selectedStudentUsername &&
+    r.status === "accepted"
+  );
+
+  if (!hasAccess) {
+    alert("You do not have access to this student details.");
+    window.location.href = "admin_dashboard.html";
+  }
+
+  function fillTable(selector, rowsHtml, colspan, emptyMessage) {
+    const body = document.querySelector(selector);
+    body.innerHTML = rowsHtml || `<tr><td colspan="${colspan}">${emptyMessage}</td></tr>`;
+  }
+
+  async function renderFromApi() {
+    try {
+      const meRes = await Api.me();
+      if (meRes?.user) {
+        teacher = meRes.user;
+        AppStore.setAuth(teacher, localStorage.getItem("token"));
+      }
+
+      const [studentsRes, academicsRes, certsRes, compsRes] = await Promise.all([
+        Api.getStudents(),
+        Api.getAcademicDocuments(selectedStudentUsername),
+        Api.getCertificationDocuments(selectedStudentUsername),
+        Api.getCompetitionDocuments(selectedStudentUsername)
+      ]);
+
+      const student = (studentsRes.students || []).find(u => u.username === selectedStudentUsername);
+      const profile = student?.studentProfile || {};
+
+      document.getElementById("titleText").innerText = `Student Detail - ${profile.name || selectedStudentUsername}`;
+      document.getElementById("profileText").innerText = `Name: ${profile.name || selectedStudentUsername} | Roll No: ${profile.rollNo || '-'} | Department: ${profile.department || '-'} | CGPA: ${profile.cgpa ?? '-'}`;
+
+      const academics = academicsRes.documents || [];
+      fillTable("#academicTable tbody", academics.map(e => `<tr><td>${e.semesterNo}</td><td>${e.fileName}</td><td><a class="link" href="${e.pdfProof.dataUrl}" download="${e.pdfProof.name}">Open PDF</a></td><td>${new Date(e.updatedAt).toLocaleString()}</td></tr>`).join(""), 4, "No academic PDFs.");
+
+      const certs = certsRes.documents || [];
+      fillTable("#certTable tbody", certs.map(e => `<tr><td>${e.certName}</td><td>${e.certLink ? `<a class="link" target="_blank" href="${e.certLink}">Open Link</a>` : '-'}</td><td><a class="link" href="${e.pdfProof.dataUrl}" download="${e.pdfProof.name}">Open PDF</a></td><td>${new Date(e.updatedAt).toLocaleString()}</td></tr>`).join(""), 4, "No certifications.");
+
+      const comps = compsRes.documents || [];
+      fillTable("#competitionTable tbody", comps.map(e => {
+        const pdf = e.pdfProof ? `<a class="link" href="${e.pdfProof.dataUrl}" download="${e.pdfProof.name}">Open PDF</a>` : "-";
+        const geo = (e.geoProofs || []).map((g, i) => `<a class="link" target="_blank" href="${g.dataUrl}">Photo ${i + 1}</a>`).join(" | ") || "-";
+        const link = e.onlineLink ? `<a class="link" target="_blank" href="${e.onlineLink}">Open Link</a>` : "-";
+        return `<tr><td>${e.competitionName}</td><td>${e.competitionDate}</td><td>${pdf}</td><td>${geo}</td><td>${link}</td></tr>`;
+      }).join(""), 5, "No competition certificates.");
+    } catch (err) {
+      if ((err.message || "").toLowerCase().includes("token") || (err.message || "").toLowerCase().includes("authorization")) {
+        AppStore.clearAuth();
+        window.location.href = "index.html";
+        return;
+      }
+      document.getElementById("profileText").innerText = err.message || "Failed to load student details.";
+    }
+  }
+
+  function goBack() {
+    window.location.href = "admin_dashboard.html";
+  }
+
+  renderFromApi();
+</script>
+</body>
+</html>
+
+

@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/documents/academics"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{studentToken}}
+body:
+  type: text
+  content: |-
+    {
+      "semesterNo": 1,
+      "fileName": "CSE001.semester-1 marksheet.pdf",
+      "pdfProof": {
+        "name": "CSE001.semester-1 marksheet.pdf",
+        "dataUrl": "data:application/pdf;base64,JVBERi0xLjcK..."
+      }
+    }
+order: 14000

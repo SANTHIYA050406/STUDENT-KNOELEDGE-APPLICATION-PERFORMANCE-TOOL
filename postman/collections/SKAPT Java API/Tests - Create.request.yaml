@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/tests"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{teacherToken}}
+body:
+  type: text
+  content: >-
+    {
+      "subject": "Java",
+      "title": "Core Java Quiz",
+      "duration": 30,
+      "questions": [
+        {
+          "text": "JVM stands for?",
+          "options": ["Java Virtual Machine", "Java Variable Method", "Joint Virtual Model", "None"],
+          "answer": "A"
+        }
+      ]
+    }
+order: 6000
