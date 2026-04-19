@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="css/hcare.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">H</div>
+        <div>
+          <strong>SKAPT</strong>
+          <small>Operations</small>
+        </div>
+      </div>
+      <nav>
+        <button class="nav-link active" onclick="window.location.href='dashboard2.html'">Dashboard</button>
+        <button class="nav-link" onclick="window.location.href='dashboard.html'">Student Dashboard</button>
+        <button class="nav-link" onclick="window.location.href='create_test.html'">Create Test</button>
+        <button class="nav-link" onclick="window.location.href='students_progress.html'">Progress</button>
+        <button class="nav-link" onclick="window.location.href='teacher_groups.html'">Teacher Groups</button>
+      </nav>
+      <div class="sidebar-cta">
+        <strong>Insights</strong>
+        <p>Track tests, results, and graphs in one glance.</p>
+        <a href="mailto:support@studenttool.com">Contact support</a>
+      </div>
+    </aside>
+
+    <div class="content">
+      <header class="top-bar">
+        <div class="title-block">
+          <p class="eyebrow">Operations</p>
+          <h2>Dashboard</h2>
+        </div>
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="search" placeholder="Search tests, metrics, or students" />
+        </div>
+        <div class="actions">
+          <button type="button" class="pill" onclick="logout()">Logout</button>
+        </div>
+      </header>
+
+      <div class="container">
+        <div id="topSection" class="top-scroll"></div>
+
+        <section class="panel">
+          <h3>Available Tests</h3>
+          <div id="testsSection" class="tests-grid"></div>
+        </section>
+
+        <div class="card graph-card">
+          <h3>Performance Graph</h3>
+          <canvas id="performanceChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/store.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
+

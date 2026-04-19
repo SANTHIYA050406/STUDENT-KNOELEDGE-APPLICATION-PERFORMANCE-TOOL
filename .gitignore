@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+target/
+*.log
+*.class
+=======
 # Java / Maven
 backend/target/
 *.class
@@ -17,3 +22,4 @@ Desktop.ini
 
 # Optional tooling
 .postman/
+>>>>>>> 9b203900f9815f09d466df423c8519acb8e7b716
