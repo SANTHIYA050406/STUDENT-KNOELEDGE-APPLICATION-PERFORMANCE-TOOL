@@ -211,6 +211,7 @@ public final class Db {
                 file_name VARCHAR(255) NOT NULL,
                 pdf_name VARCHAR(255) NOT NULL,
                 pdf_data_url LONGTEXT NOT NULL,
+                review_status VARCHAR(20) NOT NULL DEFAULT 'pending',
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 CONSTRAINT fk_marksheet_user FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
             )
@@ -224,6 +225,7 @@ public final class Db {
                 cert_link TEXT,
                 pdf_name VARCHAR(255) NOT NULL,
                 pdf_data_url LONGTEXT NOT NULL,
+                review_status VARCHAR(20) NOT NULL DEFAULT 'pending',
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 CONSTRAINT fk_cert_user FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
             )
@@ -239,6 +241,7 @@ public final class Db {
                 pdf_name VARCHAR(255),
                 pdf_data_url LONGTEXT,
                 geo_proofs_json LONGTEXT NOT NULL,
+                review_status VARCHAR(20) NOT NULL DEFAULT 'pending',
                 uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 CONSTRAINT fk_competition_user FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
             )
@@ -252,8 +255,11 @@ public final class Db {
             st.execute(tests);
             st.execute(results);
             st.execute(academicMarksheets);
+            addColumnIfMissing(st, "academic_marksheets", "review_status", "VARCHAR(20) NOT NULL DEFAULT 'pending'");
             st.execute(courseCertifications);
+            addColumnIfMissing(st, "course_certifications", "review_status", "VARCHAR(20) NOT NULL DEFAULT 'pending'");
             st.execute(competitionCertificates);
+            addColumnIfMissing(st, "competition_certificates", "review_status", "VARCHAR(20) NOT NULL DEFAULT 'pending'");
         } catch (Exception ex) {
             throw new RuntimeException("Schema initialization failed", ex);
         }

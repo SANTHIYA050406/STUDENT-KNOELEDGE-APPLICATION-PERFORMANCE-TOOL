@@ -90,11 +90,89 @@ public class DocumentsServlet extends BaseServlet {
         }
     }
 
+    @Override
+    protected void doPut(HttpServletRequest req, HttpServletResponse res) {
+        try {
+            if (!requireRole(req, res, "teacher", "admin")) return;
+
+            ReviewTarget target = reviewTarget(req);
+            if (target == null) {
+                error(res, HttpServletResponse.SC_NOT_FOUND, "Route not found");
+                return;
+            }
+
+            Map<String, Object> payload = JsonUtil.fromJson(body(req), new TypeReference<>() {});
+            String status = trim(payload.get("status")).toLowerCase();
+            if (!("approved".equals(status) || "rejected".equals(status) || "pending".equals(status))) {
+                error(res, HttpServletResponse.SC_BAD_REQUEST, "Invalid status");
+                return;
+            }
+
+            updateReviewStatus(target.type, target.id, status);
+            json(res, HttpServletResponse.SC_OK, Map.of("message", "Review updated"));
+        } catch (Exception ex) {
+            logException("Document PUT failed", ex);
+            try { error(res, HttpServletResponse.SC_BAD_REQUEST, ex.getMessage()); } catch (Exception ignored) {}
+        }
+    }
+
+    private static final class ReviewTarget {
+        final String type;
+        final long id;
+
+        ReviewTarget(String type, long id) {
+            this.type = type;
+            this.id = id;
+        }
+    }
+
+    private ReviewTarget reviewTarget(HttpServletRequest req) {
+        String path = req.getPathInfo();
+        if (path == null || path.isBlank()) return null;
+        String[] parts = path.split("/");
+        // Expected: /{type}/{id}/review
+        if (parts.length < 4) return null;
+        String type = (parts[1] == null) ? "" : parts[1].trim().toLowerCase();
+        String idPart = parts[2] == null ? "" : parts[2].trim();
+        String action = (parts[3] == null) ? "" : parts[3].trim().toLowerCase();
+        if (!"review".equals(action)) return null;
+        if (!("academics".equals(type) || "certifications".equals(type) || "competition".equals(type))) return null;
+        long id;
+        try {
+            id = Long.parseLong(idPart);
+        } catch (Exception ex) {
+            return null;
+        }
+        return new ReviewTarget(type, id);
+    }
+
+    private void updateReviewStatus(String type, long id, String status) throws Exception {
+        String table = switch (type) {
+            case "academics" -> "academic_marksheets";
+            case "certifications" -> "course_certifications";
+            case "competition" -> "competition_certificates";
+            default -> null;
+        };
+        if (table == null) {
+            throw new RuntimeException("Invalid type");
+        }
+
+        try (Connection conn = Db.getConnection();
+             PreparedStatement ps = conn.prepareStatement("UPDATE " + table + " SET review_status=? WHERE id=?")) {
+            ps.setString(1, status);
+            ps.setLong(2, id);
+            int updated = ps.executeUpdate();
+            if (updated == 0) {
+                throw new RuntimeException("Document not found");
+            }
+        }
+    }
+
     private void listAcademics(long studentId, HttpServletResponse res) throws Exception {
         List<Map<String, Object>> rows = new ArrayList<>();
         try (Connection conn = Db.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                 "SELECT id, semester_no, file_name, pdf_name, pdf_data_url, updated_at FROM academic_marksheets WHERE student_id=? ORDER BY id DESC"
+                 "SELECT id, semester_no, file_name, pdf_name, pdf_data_url, review_status, updated_at FROM academic_marksheets WHERE student_id=? ORDER BY id DESC"
              )) {
             ps.setLong(1, studentId);
             ResultSet rs = ps.executeQuery();
@@ -107,6 +185,7 @@ public class DocumentsServlet extends BaseServlet {
                     "name", rs.getString("pdf_name"),
                     "dataUrl", rs.getString("pdf_data_url")
                 ));
+                row.put("reviewStatus", trim(rs.getString("review_status")));
                 row.put("updatedAt", rs.getTimestamp("updated_at").toInstant().toString());
                 rows.add(row);
             }
@@ -118,7 +197,7 @@ public class DocumentsServlet extends BaseServlet {
         List<Map<String, Object>> rows = new ArrayList<>();
         try (Connection conn = Db.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                 "SELECT id, cert_name, cert_link, pdf_name, pdf_data_url, updated_at FROM course_certifications WHERE student_id=? ORDER BY id DESC"
+                 "SELECT id, cert_name, cert_link, pdf_name, pdf_data_url, review_status, updated_at FROM course_certifications WHERE student_id=? ORDER BY id DESC"
              )) {
             ps.setLong(1, studentId);
             ResultSet rs = ps.executeQuery();
@@ -131,6 +210,7 @@ public class DocumentsServlet extends BaseServlet {
                     "name", rs.getString("pdf_name"),
                     "dataUrl", rs.getString("pdf_data_url")
                 ));
+                row.put("reviewStatus", trim(rs.getString("review_status")));
                 row.put("updatedAt", rs.getTimestamp("updated_at").toInstant().toString());
                 rows.add(row);
             }
@@ -142,7 +222,7 @@ public class DocumentsServlet extends BaseServlet {
         List<Map<String, Object>> rows = new ArrayList<>();
         try (Connection conn = Db.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                 "SELECT id, competition_name, competition_date, online_link, pdf_name, pdf_data_url, geo_proofs_json, uploaded_at FROM competition_certificates WHERE student_id=? ORDER BY id DESC"
+                 "SELECT id, competition_name, competition_date, online_link, pdf_name, pdf_data_url, geo_proofs_json, review_status, uploaded_at FROM competition_certificates WHERE student_id=? ORDER BY id DESC"
              )) {
             ps.setLong(1, studentId);
             ResultSet rs = ps.executeQuery();
@@ -156,6 +236,7 @@ public class DocumentsServlet extends BaseServlet {
                 String pdfDataUrl = rs.getString("pdf_data_url");
                 row.put("pdfProof", (pdfName != null && pdfDataUrl != null) ? Map.of("name", pdfName, "dataUrl", pdfDataUrl) : null);
                 row.put("geoProofs", JsonUtil.fromJson(rs.getString("geo_proofs_json"), new TypeReference<List<Map<String, Object>>>() {}));
+                row.put("reviewStatus", trim(rs.getString("review_status")));
                 row.put("uploadedAt", rs.getTimestamp("uploaded_at").toInstant().toString());
                 rows.add(row);
             }
