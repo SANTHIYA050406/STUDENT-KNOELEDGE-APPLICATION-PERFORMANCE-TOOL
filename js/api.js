@@ -1,4 +1,6 @@
-const API_BASE = "http://localhost:8080/api";
+// On some Windows setups, `localhost` may resolve to IPv6 (::1) while Jetty is bound to IPv4,
+// which makes `fetch()` fail with a network error ("Failed to fetch"). Use IPv4 loopback.
+const API_BASE = "http://127.0.0.1:8080/api";
 
 function authHeaders() {
     const token = localStorage.getItem("token");

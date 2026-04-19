@@ -26,8 +26,6 @@ import java.util.Map;
     maxFileSize = 10 * 1024 * 1024, // 10MB
     maxRequestSize = 15 * 1024 * 1024 // 15MB
 )
-
-@WebServlet("/api/documents/*")
 public class DocumentsServlet extends BaseServlet {
 
     @Override
@@ -375,6 +373,24 @@ public class DocumentsServlet extends BaseServlet {
         } else {
             error(res, HttpServletResponse.SC_NOT_FOUND, "Unsupported type for multipart upload");
         }
+    }
+
+    private String normalizedType(HttpServletRequest req) {
+        String path = req.getPathInfo();
+        if (path == null || path.isBlank() || "/".equals(path)) {
+            return null;
+        }
+
+        String[] parts = path.split("/");
+        if (parts.length < 2 || parts[1].isBlank()) {
+            return null;
+        }
+
+        String type = parts[1].trim().toLowerCase();
+        return switch (type) {
+            case "academics", "certifications", "competition" -> type;
+            default -> null;
+        };
     }
 
     private String trim(Object v) {
