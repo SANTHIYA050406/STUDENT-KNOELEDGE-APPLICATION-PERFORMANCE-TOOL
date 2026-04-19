@@ -87,7 +87,7 @@
         </div>
       </section>
 
-      <section class="panel">
+      <section class="panel teacher-groups-scroll-panel">
         <div class="panel-header">
           <h3>My Groups</h3>
           <span id="groupCount" class="muted"></span>
@@ -109,12 +109,12 @@
   <script src="js/store.js"></script>
   <script src="js/api.js"></script>
 <script>
-  const GROUP_STORAGE_KEY = "teacherGroupsData";
   let user = AppStore.getState().user || JSON.parse(localStorage.getItem("currentUser") || "null");
   let students = [];
-  let allGroups = [];
+  let teacherRequests = [];
   let myGroups = [];
   const pendingGroupMembers = new Set();
+  let unreadNotifications = [];
 
   if (!user || (user.role !== "teacher" && user.role !== "admin")) {
     window.location.href = "index.html";
@@ -124,28 +124,12 @@
     return students.find(s => s.username === username) || null;
   }
 
-  function getTeacherRequests() {
-    const all = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
-    return all.filter(r => String(r.teacherId) === String(user.id) || r.teacherUsername === user.username);
-  }
-
   function getAcceptedRequests() {
-    return getTeacherRequests().filter(r => r.status === "accepted");
+    return (teacherRequests || []).filter(r => String(r.status || "").toLowerCase() === "accepted");
   }
 
   function renderHeaderDetails() {
     document.getElementById("welcomeText").innerText = `Welcome, ${user.teacherProfile?.name || user.username} (My Groups)`;
-  }
-
-  function loadGroupsFromStore() {
-    allGroups = JSON.parse(localStorage.getItem(GROUP_STORAGE_KEY) || "[]");
-    myGroups = allGroups.filter(g => String(g.teacherId) === String(user.id));
-  }
-
-  function persistGroups() {
-    const others = allGroups.filter(g => String(g.teacherId) !== String(user.id));
-    allGroups = [...others, ...myGroups];
-    localStorage.setItem(GROUP_STORAGE_KEY, JSON.stringify(allGroups));
   }
 
   function normalizeMembers(values) {
@@ -256,7 +240,7 @@
     renderSelectedMembersChips();
   }
 
-  function createGroup() {
+  async function createGroup() {
     const name = document.getElementById("groupNameInput").value.trim();
     const description = document.getElementById("groupDescription").value.trim();
     const members = normalizeMembers(Array.from(pendingGroupMembers));
@@ -274,100 +258,36 @@
       return;
     }
 
-    const newGroup = {
-      id: Date.now(),
-      teacherId: user.id,
-      teacherUsername: user.username,
-      groupName: name,
-      description,
-      members,
-      createdAt: new Date().toLocaleString()
-    };
-    myGroups.unshift(newGroup);
-    persistGroups();
-    renderGroupsList();
-    document.getElementById("groupNameInput").value = "";
-    document.getElementById("groupDescription").value = "";
-    pendingGroupMembers.clear();
-    renderMembersChecklist();
-    renderSelectedMembersChips();
+    try {
+      await Api.createGroup(name, description, members);
+      document.getElementById("groupNameInput").value = "";
+      document.getElementById("groupDescription").value = "";
+      pendingGroupMembers.clear();
+      await reloadGroupsAndRequests();
+      renderSelectedMembersChips();
+      alert("Group created.");
+    } catch (err) {
+      alert(err.message || "Failed to create group.");
+    }
   }
 
   async function sendGroupRequest() {
     const groupName = document.getElementById("groupRequestName").value.trim() || "General";
-    const studentRollNo = document.getElementById("groupRequestRoll").value.trim();
-    if (!studentRollNo) {
+    const studentIdentifier = document.getElementById("groupRequestRoll").value.trim();
+    if (!studentIdentifier) {
       alert("Enter student roll number or username.");
       return;
     }
 
-    const normalize = (value) => (value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-    const inputNorm = normalize(studentRollNo);
-    let student = students.find(s => {
-      const roll = (s.studentProfile?.rollNo || "").trim();
-      const uname = (s.username || "").trim();
-      const rollNorm = normalize(roll);
-      const unameNorm = normalize(uname);
-      return rollNorm === inputNorm || unameNorm === inputNorm ||
-        (rollNorm && inputNorm.includes(rollNorm)) || (unameNorm && inputNorm.includes(unameNorm));
-    });
-
-    if (!student) {
-      if (!students.length) {
-        try {
-          const studentsRes = await Api.getStudents({ rollNo: studentRollNo, username: studentRollNo });
-          students = studentsRes.students || [];
-        } catch (err) {
-          alert(err.message || "Unable to load students.");
-          return;
-        }
-        student = students.find(s => {
-          const roll = (s.studentProfile?.rollNo || "").trim();
-          const uname = (s.username || "").trim();
-          const rollNorm = normalize(roll);
-          const unameNorm = normalize(uname);
-          return rollNorm === inputNorm || unameNorm === inputNorm ||
-            (rollNorm && inputNorm.includes(rollNorm)) || (unameNorm && inputNorm.includes(unameNorm));
-        });
-      }
+    try {
+      await Api.createGroupRequest(studentIdentifier, groupName);
+      document.getElementById("groupRequestName").value = "";
+      document.getElementById("groupRequestRoll").value = "";
+      await reloadGroupsAndRequests();
+      alert("Request sent.");
+    } catch (err) {
+      alert(err.message || "Failed to send request.");
     }
-    if (!student) {
-      alert("Student not found. Try another roll number or username.");
-      return;
-    }
-
-    const reqs = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
-    const duplicate = reqs.find(r =>
-      r.teacherUsername === user.username &&
-      r.studentUsername === student.username &&
-      (r.groupName || "General").toLowerCase() === groupName.toLowerCase() &&
-      ["pending", "accepted"].includes(r.status)
-    );
-    if (duplicate) {
-      alert("A pending or accepted request already exists for this student in that group.");
-      return;
-    }
-
-    reqs.push({
-      id: Date.now(),
-      teacherId: user.id,
-      teacherUsername: user.username,
-      teacherName: user.teacherProfile?.name || user.username,
-      teacherDepartment: user.teacherProfile?.department || "",
-      studentId: student.id,
-      studentUsername: student.username,
-      studentName: student.studentProfile?.name || student.username,
-      studentRollNo: student.studentProfile?.rollNo || "",
-      groupName,
-      status: "pending",
-      requestedAt: new Date().toLocaleString()
-    });
-
-    localStorage.setItem("studentGroupRequests", JSON.stringify(reqs));
-    document.getElementById("groupRequestName").value = "";
-    document.getElementById("groupRequestRoll").value = "";
-    renderAcceptedSnapshot();
-    alert("Request sent.");
   }
 
   function renderGroupsList() {
@@ -380,23 +300,25 @@
     document.getElementById("groupCount").innerText = `${myGroups.length} ${myGroups.length === 1 ? "group" : "groups"}`;
 
     container.innerHTML = myGroups.map(group => {
-      const uniqueMembers = Array.from(new Set(group.members));
-      const membersHtml = uniqueMembers.length
-        ? uniqueMembers.map(member => {
-            const student = studentByUsername(member);
-            const displayName = student?.studentProfile?.name || member;
-            const roll = student?.studentProfile?.rollNo || member;
-            const safeMember = escapeJsString(member);
+      const members = (group.members || []).filter(Boolean);
+      const membersHtml = members.length
+        ? members.map(member => {
+            const username = (member.username || "").trim();
+            const displayName = member.studentProfile?.name || username;
+            const roll = member.studentProfile?.rollNo || "-";
+            const dept = member.studentProfile?.department || "-";
+            const safeUsername = escapeJsString(username);
+            const studentId = Number(member.id);
             return `
               <div class="member-row">
                 <div class="member-details">
-                  <strong>${displayName}</strong>
-                  <p>Roll / username: ${roll} | Department: ${student?.studentProfile?.department || "-"}</p>
+                  <strong>${escapeHtml(displayName)}</strong>
+                  <p>Roll / username: ${escapeHtml(roll)} | Department: ${escapeHtml(dept)}</p>
                 </div>
                 <div class="member-actions">
-                  <button class="danger small-action" onclick="removeMemberFromGroup(${group.id}, '${safeMember}')">Remove</button>
-                  <button class="ghost-action small-action" onclick="showStudentDetails('${safeMember}');return false;">Preview</button>
-                  <button class="ghost-action small-action" onclick="openStudentDetailPage('${safeMember}');return false;">Details</button>
+                  <button class="danger small-action" onclick="removeMemberFromGroup(${group.id}, ${studentId})">Remove</button>
+                  <button class="ghost-action small-action" onclick="showStudentDetails('${safeUsername}');return false;">Preview</button>
+                  <button class="ghost-action small-action" onclick="openStudentDetailPage('${safeUsername}');return false;">Details</button>
                 </div>
               </div>
             `;
@@ -406,29 +328,35 @@
       return `
         <div class="group-card">
           <div class="group-card-header">
-            <h4>${group.groupName}</h4>
+            <h4>${escapeHtml(group.groupName || "Group")}</h4>
             <button class="danger small-action" onclick="removeGroup(${group.id})">Remove Group</button>
           </div>
-          <p class="muted">${group.description || "No description provided."}</p>
-          <p class="muted">Created at ${group.createdAt}</p>
+          <p class="muted">${escapeHtml(group.description || "No description provided.")}</p>
+          <p class="muted">Created at ${group.createdAt ? escapeHtml(new Date(group.createdAt).toLocaleString()) : "-"}</p>
           ${membersHtml}
         </div>
       `;
     }).join("");
   }
 
-  function removeGroup(groupId) {
-    myGroups = myGroups.filter(g => g.id !== Number(groupId));
-    persistGroups();
-    renderGroupsList();
+  async function removeGroup(groupId) {
+    if (!groupId) return;
+    try {
+      await Api.deleteGroup(groupId);
+      await reloadGroupsAndRequests();
+    } catch (err) {
+      alert(err.message || "Failed to remove group.");
+    }
   }
 
-  function removeMemberFromGroup(groupId, member) {
-    const idx = myGroups.findIndex(g => g.id === Number(groupId));
-    if (idx === -1) return;
-    myGroups[idx].members = myGroups[idx].members.filter(m => m !== member);
-    persistGroups();
-    renderGroupsList();
+  async function removeMemberFromGroup(groupId, studentId) {
+    if (!groupId || !studentId) return;
+    try {
+      await Api.removeGroupMember(groupId, studentId);
+      await reloadGroupsAndRequests();
+    } catch (err) {
+      alert(err.message || "Failed to remove member.");
+    }
   }
 
   async function showStudentDetails(username) {
@@ -530,8 +458,14 @@
         user = meRes.user;
         AppStore.setAuth(user, localStorage.getItem("token"));
       }
-      const studentsRes = await Api.getStudents();
+      const [studentsRes, requestsRes, groupsRes] = await Promise.all([
+        Api.getStudents(),
+        Api.getGroupRequests(),
+        Api.getGroups()
+      ]);
       students = studentsRes.students || [];
+      teacherRequests = requestsRes.requests || [];
+      myGroups = groupsRes.groups || [];
     } catch (err) {
       if ((err.message || "").toLowerCase().includes("token") || (err.message || "").toLowerCase().includes("authorization")) {
         AppStore.clearAuth();
@@ -543,73 +477,91 @@
     }
   }
 
+  async function reloadGroupsAndRequests() {
+    try {
+      const [requestsRes, groupsRes] = await Promise.all([
+        Api.getGroupRequests(),
+        Api.getGroups()
+      ]);
+      teacherRequests = requestsRes.requests || [];
+      myGroups = groupsRes.groups || [];
+      renderGroupsList();
+      renderAcceptedSnapshot();
+    } catch (err) {
+      alert(err.message || "Failed to refresh groups.");
+    }
+  }
+
   function logout() {
     AppStore.clearAuth();
     window.location.href = "index.html";
   }
 
   function getMyNotifications() {
-    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
-    return notes
-      .filter(n => n.toUsername === user.username && !n.read)
-      .sort((a,b)=>b.id-a.id);
+    // Old versions stored notifications in localStorage (device-specific). We now use the server.
+    return [];
   }
 
-  function renderNotificationPanel() {
+  async function renderNotificationPanel() {
     const panel = document.getElementById("notificationPanel");
     const listEl = document.getElementById("notificationList");
     const countEl = document.getElementById("notificationCount");
     if (!panel || !listEl || !countEl) return;
-    const notifications = getMyNotifications();
-    if (!notifications.length) {
-      listEl.innerHTML = '<p class="muted" style="padding:12px 16px;">No notifications yet.</p>';
-      countEl.style.display = "none";
-    } else {
-      countEl.innerText = notifications.length;
-      countEl.style.display = "inline";
-      listEl.innerHTML = notifications.map(n => `
-        <div class="notification-item">
-          <div class="notification-header">
-            <strong>${n.fromUsername} (${n.fromRole})</strong>
-            <div class="notification-actions">
-              <button type="button" class="ghost-action small-action" onclick="markNotificationAsRead(${n.id})" aria-label="Mark notification read">✔</button>
+
+    try {
+      const res = await Api.getNotifications({ unreadOnly: "true" });
+      const notifications = res.notifications || [];
+      unreadNotifications = notifications;
+
+      if (!notifications.length) {
+        listEl.innerHTML = '<p class="muted" style="padding:12px 16px;">No notifications yet.</p>';
+        countEl.style.display = "none";
+      } else {
+        countEl.innerText = notifications.length;
+        countEl.style.display = "inline";
+        listEl.innerHTML = notifications.map(n => `
+          <div class="notification-item">
+            <div class="notification-header">
+              <strong>${escapeHtml(n.fromUsername)}</strong>
+              <div class="notification-actions">
+                <button type="button" class="ghost-action small-action" onclick="markNotificationAsRead(${n.id})" aria-label="Mark notification read">✔</button>
+              </div>
             </div>
+            <div>${escapeHtml(n.message)}</div>
+            <span>${n.createdAt ? escapeHtml(new Date(n.createdAt).toLocaleString()) : ""}</span>
           </div>
-          <div>${n.message}</div>
-          <span>${n.createdAt || ""}</span>
-        </div>
-      `).join("");
+        `).join("");
+      }
+    } catch (err) {
+      listEl.innerHTML = `<p class="muted" style="padding:12px 16px;">${escapeHtml(err.message || "Failed to load notifications.")}</p>`;
+      countEl.style.display = "none";
     }
   }
 
-  function markNotificationAsRead(id) {
-    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
-    let changed = false;
-    for (const note of notes) {
-      if (note.id === id && !note.read) {
-        note.read = true;
-        changed = true;
-        break;
-      }
+  async function markNotificationAsRead(id) {
+    try {
+      await Api.markNotificationRead(id);
+    } catch (err) {
+      alert(err.message || "Failed to mark notification as read.");
     }
-    if (changed) {
-      localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
-    }
-    renderNotificationPanel();
+    await renderNotificationPanel();
   }
 
   function toggleNotificationPanel() {
     const panel = document.getElementById("notificationPanel");
     if (!panel) return;
     panel.classList.toggle("open");
-    renderNotificationPanel();
+    if (panel.classList.contains("open")) {
+      renderNotificationPanel();
+    }
   }
 
-  function clearNotifications() {
-    const remaining = (JSON.parse(localStorage.getItem("dashboardNotifications")) || [])
-      .filter(n => n.toUsername !== user.username);
-    localStorage.setItem("dashboardNotifications", JSON.stringify(remaining));
-    renderNotificationPanel();
+  async function clearNotifications() {
+    const ids = (unreadNotifications || []).map(n => n.id);
+    for (const id of ids) {
+      try { await Api.markNotificationRead(id); } catch (_) {}
+    }
+    await renderNotificationPanel();
   }
 
   document.addEventListener("click", event => {
@@ -621,17 +573,10 @@
     }
   });
 
-  window.addEventListener("storage", event => {
-    if (event.key === "dashboardNotifications") {
-      renderNotificationPanel();
-    }
-  });
-
   (async function init() {
     renderHeaderDetails();
     await loadApiData();
     renderHeaderDetails();
-    loadGroupsFromStore();
     renderGroupsList();
     renderAcceptedSnapshot();
     renderNotificationPanel();

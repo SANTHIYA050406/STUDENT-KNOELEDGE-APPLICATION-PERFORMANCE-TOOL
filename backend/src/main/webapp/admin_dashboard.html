@@ -146,6 +146,8 @@
   let tests = [];
   let results = [];
   let students = [];
+  let teacherRequests = [];
+  let myGroups = [];
 
   if (!user || (user.role !== "teacher" && user.role !== "admin")) {
     window.location.href = "index.html";
@@ -165,8 +167,7 @@
   }
 
   function getTeacherRequests() {
-    const all = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
-    return all.filter(r => String(r.teacherId) === String(user.id) || r.teacherUsername === user.username);
+    return teacherRequests || [];
   }
 
   function getAcceptedRequests() {
@@ -174,8 +175,7 @@
   }
 
   function getTeacherGroups() {
-    const allGroups = JSON.parse(localStorage.getItem("teacherGroupsData") || "[]");
-    return allGroups.filter(g => String(g.teacherId) === String(user.id) || g.teacherUsername === user.username);
+    return myGroups || [];
   }
 
   function findStudentRecord(identifier) {
@@ -220,12 +220,11 @@
 
     getTeacherGroups().forEach(group => {
       (group.members || []).forEach(member => {
-        const matched = findStudentRecord(member);
         upsert({
-          username: matched?.username || member || "",
-          rollNo: matched?.studentProfile?.rollNo || "",
-          name: matched?.studentProfile?.name || "",
-          studentId: matched?.id || ""
+          username: member?.username || "",
+          rollNo: member?.studentProfile?.rollNo || "",
+          name: member?.studentProfile?.name || "",
+          studentId: member?.id || ""
         });
       });
     });
@@ -314,31 +313,42 @@
       : '<tr><td colspan="4">No results from accepted students.</td></tr>';
   }
 
-  function removeStudentFromGroup(studentUsername, groupName) {
-    const reqs = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
-    reqs.forEach(r => {
-      if ((String(r.teacherId) === String(user.id) || r.teacherUsername === user.username) && r.studentUsername === studentUsername && (r.groupName || "General") === groupName && r.status === "accepted") {
-        r.status = "removed_by_teacher";
-        r.removedAt = new Date().toLocaleString();
-      }
-    });
-    localStorage.setItem("studentGroupRequests", JSON.stringify(reqs));
-    refreshDashboard();
+  async function removeStudentFromGroup(studentUsername, groupName) {
+    const target = (teacherRequests || []).find(r =>
+      r.studentUsername === studentUsername &&
+      (r.groupName || "General") === groupName &&
+      String(r.status || "").toLowerCase() === "accepted"
+    );
+    if (!target) return;
+    try {
+      await Api.updateGroupRequest(target.id, "removed_by_teacher");
+      const requestsRes = await Api.getGroupRequests();
+      teacherRequests = requestsRes.requests || [];
+      refreshDashboard();
+    } catch (err) {
+      alert(err.message || "Failed to remove student.");
+    }
   }
 
-  function removeGroup(groupName) {
-    const reqs = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
-    reqs.forEach(r => {
-      if ((String(r.teacherId) === String(user.id) || r.teacherUsername === user.username) && (r.groupName || "General") === groupName && ["pending", "accepted"].includes(r.status)) {
-        r.status = "removed_by_teacher";
-        r.removedAt = new Date().toLocaleString();
+  async function removeGroup(groupName) {
+    const targets = (teacherRequests || []).filter(r =>
+      (r.groupName || "General") === groupName &&
+      ["pending", "accepted"].includes(String(r.status || "").toLowerCase())
+    );
+    if (!targets.length) return;
+    try {
+      for (const t of targets) {
+        await Api.updateGroupRequest(t.id, "removed_by_teacher");
       }
-    });
-    localStorage.setItem("studentGroupRequests", JSON.stringify(reqs));
-    refreshDashboard();
+      const requestsRes = await Api.getGroupRequests();
+      teacherRequests = requestsRes.requests || [];
+      refreshDashboard();
+    } catch (err) {
+      alert(err.message || "Failed to remove group.");
+    }
   }
 
-  function sendNotificationToStudent() {
+  async function sendNotificationToStudent() {
     const selectedValue = document.getElementById("notifyStudentSelect").value;
     const matchedStudent = findStudentRecord(selectedValue);
     const toUsername = matchedStudent?.username || selectedValue;
@@ -346,55 +356,55 @@
     if (!toUsername) { alert("No connected student selected."); return; }
     if (!message) { alert("Notification message is required."); return; }
 
-    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
-    notes.push({ id: Date.now(), fromUsername: user.username, fromRole: "teacher", toUsername, toRole: "student", message, createdAt: new Date().toLocaleString(), read: false });
-    localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
-    document.getElementById("teacherNotificationMsg").value = "";
-    alert("Notification sent.");
+    try {
+      await Api.sendNotification(toUsername, message);
+      document.getElementById("teacherNotificationMsg").value = "";
+      alert("Notification sent.");
+    } catch (err) {
+      alert(err.message || "Failed to send notification.");
+    }
   }
 
-  function sendFeedbackToStudent() {
+  async function sendFeedbackToStudent() {
     const selectedValue = document.getElementById("feedbackStudentSelect").value;
     const matchedStudent = findStudentRecord(selectedValue);
     const toUsername = matchedStudent?.username || selectedValue;
     const message = document.getElementById("feedbackTemplate").value;
     if (!toUsername) { alert("No connected student selected."); return; }
 
-    const student = matchedStudent || studentByUsername(toUsername);
-    const toName = student?.studentProfile?.name || toUsername;
-    const feedbacks = JSON.parse(localStorage.getItem("studentFeedbackMessages")) || [];
-    feedbacks.push({ id: Date.now(), fromUsername: user.username, fromRole: "teacher", toUsername, toName, message, createdAt: new Date().toLocaleString() });
-    localStorage.setItem("studentFeedbackMessages", JSON.stringify(feedbacks));
-    renderFeedbackSentTable();
-    alert("Feedback sent.");
+    try {
+      await Api.sendFeedback(toUsername, message);
+      await renderFeedbackSentTable();
+      alert("Feedback sent.");
+    } catch (err) {
+      alert(err.message || "Failed to send feedback.");
+    }
   }
 
-  function renderFeedbackSentTable() {
-    const feedbacks = JSON.parse(localStorage.getItem("studentFeedbackMessages")) || [];
-    const mine = feedbacks.filter(f => f.fromUsername === user.username).sort((a, b) => b.id - a.id);
+  async function renderFeedbackSentTable() {
+    const res = await Api.getFeedback();
+    const mine = (res.feedback || []).sort((a, b) => Number(b.id) - Number(a.id));
     const body = document.querySelector("#teacherFeedbackTable tbody");
     body.innerHTML = mine.length
       ? mine.map(f => {
           const student = studentByUsername(f.toUsername);
-          const displayName = f.toName || student?.studentProfile?.name || f.toUsername;
-          return `<tr><td>${displayName}</td><td>${f.message}</td><td>${f.createdAt}</td></tr>`;
+          const displayName = student?.studentProfile?.name || f.toUsername;
+          const createdAt = f.createdAt ? new Date(f.createdAt).toLocaleString() : "";
+          return `<tr><td>${displayName}</td><td>${f.message}</td><td>${createdAt}</td></tr>`;
         }).join("")
       : '<tr><td colspan="3">No feedback sent yet.</td></tr>';
   }
 
-  function getMyNotifications() {
-    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
-    return notes
-      .filter(n => n.toUsername === user.username && !n.read)
-      .sort((a, b) => b.id - a.id);
-  }
+  let unreadNotifications = [];
 
-  function renderNotificationPanel() {
+  async function renderNotificationPanel() {
     const panel = document.getElementById("notificationPanel");
     const listEl = document.getElementById("notificationList");
     const countEl = document.getElementById("notificationCount");
     if (!panel || !listEl || !countEl) return;
-    const notifications = getMyNotifications();
+    const res = await Api.getNotifications({ unreadOnly: "true" });
+    const notifications = res.notifications || [];
+    unreadNotifications = notifications;
     if (!notifications.length) {
       listEl.innerHTML = '<p class="muted" style="padding:12px 16px;">No notifications yet.</p>';
       countEl.style.display = "none";
@@ -404,13 +414,13 @@
       listEl.innerHTML = notifications.map(n => `
         <div class="notification-item">
           <div class="notification-header">
-            <strong>${n.fromUsername} (${n.fromRole})</strong>
+            <strong>${n.fromUsername}</strong>
             <div class="notification-actions">
               <button type="button" class="ghost-action small-action" onclick="markNotificationAsRead(${n.id})" aria-label="Mark notification read">✔</button>
             </div>
           </div>
           <div>${n.message}</div>
-          <span>${n.createdAt || ""}</span>
+          <span>${n.createdAt ? new Date(n.createdAt).toLocaleString() : ""}</span>
         </div>
       `).join("");
     }
@@ -420,30 +430,22 @@
     const panel = document.getElementById("notificationPanel");
     if (!panel) return;
     panel.classList.toggle("open");
-    renderNotificationPanel();
+    if (panel.classList.contains("open")) {
+      renderNotificationPanel();
+    }
   }
 
-  function markNotificationAsRead(id) {
-    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
-    let changed = false;
-    for (const note of notes) {
-      if (note.id === id && !note.read) {
-        note.read = true;
-        changed = true;
-        break;
-      }
-    }
-    if (changed) {
-      localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
-    }
-    renderNotificationPanel();
+  async function markNotificationAsRead(id) {
+    await Api.markNotificationRead(id);
+    await renderNotificationPanel();
   }
 
-  function clearNotifications() {
-    const remaining = (JSON.parse(localStorage.getItem("dashboardNotifications")) || [])
-      .filter(n => n.toUsername !== user.username);
-    localStorage.setItem("dashboardNotifications", JSON.stringify(remaining));
-    renderNotificationPanel();
+  async function clearNotifications() {
+    const ids = (unreadNotifications || []).map(n => n.id);
+    for (const id of ids) {
+      await Api.markNotificationRead(id);
+    }
+    await renderNotificationPanel();
   }
 
   document.addEventListener("click", event => {
@@ -455,14 +457,7 @@
     }
   });
 
-  window.addEventListener("storage", event => {
-    if (event.key === "dashboardNotifications") {
-      renderNotificationPanel();
-    }
-    if (event.key === "studentGroupRequests" || event.key === "teacherGroupsData") {
-      refreshDashboard();
-    }
-  });
+  // Cross-device state is server-backed; no localStorage listeners needed.
 
   function openStudentDetails(studentUsername) {
     const acceptedUsernames = [...new Set(getAcceptedRequests().map(r => r.studentUsername))];
@@ -482,10 +477,18 @@
         AppStore.setAuth(user, localStorage.getItem("token"));
       }
 
-      const [testsRes, resultsRes, studentsRes] = await Promise.all([Api.getTests(), Api.getResults(), Api.getStudents()]);
+      const [testsRes, resultsRes, studentsRes, requestsRes, groupsRes] = await Promise.all([
+        Api.getTests(),
+        Api.getResults(),
+        Api.getStudents(),
+        Api.getGroupRequests(),
+        Api.getGroups()
+      ]);
       tests = testsRes.tests || [];
       results = resultsRes.results || [];
       students = studentsRes.students || [];
+      teacherRequests = requestsRes.requests || [];
+      myGroups = groupsRes.groups || [];
       AppStore.setTests(tests);
       AppStore.setResults(results);
     } catch (err) {

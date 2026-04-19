@@ -137,6 +137,7 @@
   let user = AppStore.getState().user || JSON.parse(localStorage.getItem("currentUser") || "null");
   let tests = [];
   let results = [];
+  let myRequests = [];
 
   if (!user || user.role !== "student") window.location.href = "index.html";
 
@@ -154,14 +155,10 @@
 
   updateStudentProfile(user);
 
-  const allRequests = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
-  const currentRollNo = (user.studentProfile?.rollNo || user.studentProfile?.rollNumber || "").trim().toLowerCase();
-  const myRequests = allRequests.filter(req => {
-    const sameId = req.studentId && user.id && String(req.studentId) === String(user.id);
-    const sameUsername = (req.studentUsername || "").toLowerCase() === (user.username || "").toLowerCase();
-    const sameRoll = currentRollNo && (req.studentRollNo || "").trim().toLowerCase() === currentRollNo;
-    return sameId || sameUsername || sameRoll;
-  });
+  async function loadMyRequests() {
+    const res = await Api.getGroupRequests();
+    myRequests = res.requests || [];
+  }
 
   function renderRequestsTable() {
     const reqBody = document.querySelector("#studentRequestsTable tbody");
@@ -249,32 +246,30 @@
       : '<option value="">No connected teachers</option>';
   }
 
-  function sendNotificationToTeacher() {
+  async function sendNotificationToTeacher() {
     const toUsername = document.getElementById("notifyTeacherSelect").value;
     const message = document.getElementById("studentNotificationMsg").value.trim();
     if (!toUsername) { alert("No connected teacher selected."); return; }
     if (!message) { alert("Notification message is required."); return; }
-
-    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
-    notes.push({ id: Date.now(), fromUsername: user.username, fromRole: "student", toUsername, toRole: "teacher", message, createdAt: new Date().toLocaleString(), read: false });
-    localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
-    document.getElementById("studentNotificationMsg").value = "";
-    alert("Notification sent.");
+    try {
+      await Api.sendNotification(toUsername, message);
+      document.getElementById("studentNotificationMsg").value = "";
+      alert("Notification sent.");
+    } catch (err) {
+      alert(err.message || "Failed to send notification");
+    }
   }
 
-  function getMyNotifications() {
-    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
-    return notes
-      .filter(n => n.toUsername === user.username && !n.read)
-      .sort((a,b)=>b.id-a.id);
-  }
+  let unreadNotifications = [];
 
-  function renderNotificationPanel() {
+  async function renderNotificationPanel() {
     const panel = document.getElementById("notificationPanel");
     const listEl = document.getElementById("notificationList");
     const countEl = document.getElementById("notificationCount");
     if (!panel || !listEl || !countEl) return;
-    const notifications = getMyNotifications();
+    const notificationsRes = await Api.getNotifications({ unreadOnly: "true" });
+    const notifications = notificationsRes.notifications || [];
+    unreadNotifications = notifications;
     if (!notifications.length) {
       listEl.innerHTML = '<p class="muted" style="padding:12px 16px;">No notifications yet.</p>';
       countEl.style.display = "none";
@@ -300,30 +295,30 @@
     const panel = document.getElementById("notificationPanel");
     if (!panel) return;
     panel.classList.toggle("open");
-    renderNotificationPanel();
+    if (panel.classList.contains("open")) {
+      renderNotificationPanel();
+    }
   }
 
-  function markNotificationAsRead(id) {
-    const notes = JSON.parse(localStorage.getItem("dashboardNotifications")) || [];
-    let changed = false;
-    for (const note of notes) {
-      if (note.id === id && !note.read) {
-        note.read = true;
-        changed = true;
-        break;
+  async function markNotificationAsRead(id) {
+    try {
+      await Api.markNotificationRead(id);
+      await renderNotificationPanel();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function clearNotifications() {
+    try {
+      const ids = (unreadNotifications || []).map(n => n.id);
+      for (const id of ids) {
+        await Api.markNotificationRead(id);
       }
+      await renderNotificationPanel();
+    } catch (err) {
+      console.error(err);
     }
-    if (changed) {
-      localStorage.setItem("dashboardNotifications", JSON.stringify(notes));
-    }
-    renderNotificationPanel();
-  }
-
-  function clearNotifications() {
-    const remaining = (JSON.parse(localStorage.getItem("dashboardNotifications")) || [])
-      .filter(n => n.toUsername !== user.username);
-    localStorage.setItem("dashboardNotifications", JSON.stringify(remaining));
-    renderNotificationPanel();
   }
 
   document.addEventListener("click", event => {
@@ -335,33 +330,25 @@
     }
   });
 
-  window.addEventListener("storage", event => {
-    if (event.key === "dashboardNotifications") {
-      renderNotificationPanel();
+  async function renderStudentFeedback() {
+    try {
+      const res = await Api.getFeedback();
+      const mine = (res.feedback || []).sort((a,b)=>Number(b.id)-Number(a.id));
+      document.getElementById("studentFeedbackLine").innerText = mine.length ? mine[0].message : "No feedback yet.";
+    } catch (err) {
+      document.getElementById("studentFeedbackLine").innerText = "No feedback yet.";
     }
-  });
-
-  function renderStudentFeedback() {
-    const feedbacks = JSON.parse(localStorage.getItem("studentFeedbackMessages")) || [];
-    const mine = feedbacks.filter(f => f.toUsername === user.username).sort((a,b)=>b.id-a.id);
-    document.getElementById("studentFeedbackLine").innerText = mine.length ? mine[0].message : "No feedback yet.";
   }
 
-  function updateRequest(requestId, status) {
-    const requests = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
-    const currentRollNo = (user.studentProfile?.rollNo || user.studentProfile?.rollNumber || "").trim().toLowerCase();
-    const idx = requests.findIndex(r => {
-      if (r.id !== requestId) return false;
-      const sameId = r.studentId && user.id && String(r.studentId) === String(user.id);
-      const sameUsername = (r.studentUsername || "").toLowerCase() === (user.username || "").toLowerCase();
-      const sameRoll = currentRollNo && (r.studentRollNo || "").trim().toLowerCase() === currentRollNo;
-      return sameId || sameUsername || sameRoll;
-    });
-    if (idx === -1) return;
-    requests[idx].status = status;
-    requests[idx].respondedAt = new Date().toLocaleString();
-    localStorage.setItem("studentGroupRequests", JSON.stringify(requests));
-    window.location.reload();
+  async function updateRequest(requestId, status) {
+    try {
+      await Api.updateGroupRequest(requestId, status);
+      await loadMyRequests();
+      renderRequestsTable();
+      renderTeacherNotifyTargets();
+    } catch (err) {
+      alert(err.message || "Failed to update request");
+    }
   }
 
   function showPage(pageId, btn) {
@@ -374,10 +361,18 @@
   function startTest(id) { localStorage.setItem("selectedTestId", id); window.location.href = "take_test.html"; }
   function logout() { AppStore.clearAuth(); window.location.href = "index.html"; }
 
-  renderRequestsTable();
-  renderTeacherNotifyTargets();
-  renderStudentFeedback();
-  renderNotificationPanel();
+  (async function initConnections() {
+    try {
+      await loadMyRequests();
+      renderRequestsTable();
+      renderTeacherNotifyTargets();
+      await renderStudentFeedback();
+      await renderNotificationPanel();
+    } catch (err) {
+      console.error(err);
+    }
+  })();
+
   loadApiData();
 </script>
 </body>

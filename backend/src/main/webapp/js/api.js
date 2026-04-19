@@ -117,5 +117,55 @@ window.Api = {
             method: "PUT",
             body: JSON.stringify({ status })
         });
+    },
+
+    // Cross-device (server-backed) connections / groups / messaging
+    getGroupRequests() {
+        return request("/group-requests");
+    },
+
+    createGroupRequest(studentIdentifier, groupName) {
+        return request("/group-requests", { method: "POST", body: JSON.stringify({ studentIdentifier, groupName }) });
+    },
+
+    updateGroupRequest(id, status) {
+        return request(`/group-requests/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify({ status }) });
+    },
+
+    getGroups() {
+        return request("/groups");
+    },
+
+    createGroup(groupName, description, members) {
+        return request("/groups", { method: "POST", body: JSON.stringify({ groupName, description, members }) });
+    },
+
+    deleteGroup(id) {
+        return request(`/groups/${encodeURIComponent(id)}`, { method: "DELETE" });
+    },
+
+    removeGroupMember(groupId, studentId) {
+        return request(`/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(studentId)}`, { method: "DELETE" });
+    },
+
+    getNotifications(params) {
+        const q = params ? `?${new URLSearchParams(params).toString()}` : "";
+        return request(`/notifications${q}`);
+    },
+
+    sendNotification(toUsername, message) {
+        return request("/notifications", { method: "POST", body: JSON.stringify({ toUsername, message }) });
+    },
+
+    markNotificationRead(id) {
+        return request(`/notifications/${encodeURIComponent(id)}/read`, { method: "PUT" });
+    },
+
+    getFeedback() {
+        return request("/feedback");
+    },
+
+    sendFeedback(toUsername, message) {
+        return request("/feedback", { method: "POST", body: JSON.stringify({ toUsername, message }) });
     }
 };

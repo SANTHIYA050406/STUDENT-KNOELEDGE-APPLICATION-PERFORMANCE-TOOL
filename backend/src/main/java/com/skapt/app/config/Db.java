@@ -247,6 +247,70 @@ public final class Db {
             )
         """;
 
+        String groupRequests = """
+            CREATE TABLE IF NOT EXISTS group_requests (
+                id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                teacher_id BIGINT NOT NULL,
+                student_id BIGINT NOT NULL,
+                group_name VARCHAR(120) NOT NULL DEFAULT 'General',
+                status VARCHAR(30) NOT NULL DEFAULT 'pending',
+                requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                responded_at TIMESTAMP NULL,
+                removed_at TIMESTAMP NULL,
+                CONSTRAINT fk_gr_teacher FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
+                CONSTRAINT fk_gr_student FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE KEY uq_gr_teacher_student_group (teacher_id, student_id, group_name)
+            )
+        """;
+
+        String teacherGroups = """
+            CREATE TABLE IF NOT EXISTS teacher_groups (
+                id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                teacher_id BIGINT NOT NULL,
+                group_name VARCHAR(120) NOT NULL,
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_tg_teacher FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE KEY uq_teacher_group_name (teacher_id, group_name)
+            )
+        """;
+
+        String teacherGroupMembers = """
+            CREATE TABLE IF NOT EXISTS teacher_group_members (
+                group_id BIGINT NOT NULL,
+                student_id BIGINT NOT NULL,
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (group_id, student_id),
+                CONSTRAINT fk_tgm_group FOREIGN KEY (group_id) REFERENCES teacher_groups(id) ON DELETE CASCADE,
+                CONSTRAINT fk_tgm_student FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """;
+
+        String notifications = """
+            CREATE TABLE IF NOT EXISTS notifications (
+                id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                from_user_id BIGINT NOT NULL,
+                to_user_id BIGINT NOT NULL,
+                message TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                read_at TIMESTAMP NULL,
+                CONSTRAINT fk_note_from FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE CASCADE,
+                CONSTRAINT fk_note_to FOREIGN KEY (to_user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """;
+
+        String feedback = """
+            CREATE TABLE IF NOT EXISTS feedback_messages (
+                id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                from_teacher_id BIGINT NOT NULL,
+                to_student_id BIGINT NOT NULL,
+                message TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_fb_teacher FOREIGN KEY (from_teacher_id) REFERENCES users(id) ON DELETE CASCADE,
+                CONSTRAINT fk_fb_student FOREIGN KEY (to_student_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """;
+
         try (Connection conn = getConnection(); Statement st = conn.createStatement()) {
             st.execute(users);
             // If the users table already existed from an earlier version, add missing columns.
@@ -260,6 +324,12 @@ public final class Db {
             addColumnIfMissing(st, "course_certifications", "review_status", "VARCHAR(20) NOT NULL DEFAULT 'pending'");
             st.execute(competitionCertificates);
             addColumnIfMissing(st, "competition_certificates", "review_status", "VARCHAR(20) NOT NULL DEFAULT 'pending'");
+
+            st.execute(groupRequests);
+            st.execute(teacherGroups);
+            st.execute(teacherGroupMembers);
+            st.execute(notifications);
+            st.execute(feedback);
         } catch (Exception ex) {
             throw new RuntimeException("Schema initialization failed", ex);
         }

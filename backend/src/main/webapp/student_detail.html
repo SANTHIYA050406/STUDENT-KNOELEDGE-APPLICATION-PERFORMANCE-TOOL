@@ -82,16 +82,19 @@
     window.location.href = "admin_dashboard.html";
   }
 
-  const requests = JSON.parse(localStorage.getItem("studentGroupRequests")) || [];
-  const hasAccess = requests.some(r =>
-    (String(r.teacherId) === String(teacher.id) || r.teacherUsername === teacher.username) &&
-    r.studentUsername === selectedStudentUsername &&
-    r.status === "accepted"
-  );
-
-  if (!hasAccess) {
-    alert("You do not have access to this student details.");
-    window.location.href = "admin_dashboard.html";
+  async function ensureAccess() {
+    const res = await Api.getGroupRequests();
+    const requests = res.requests || [];
+    const hasAccess = requests.some(r =>
+      r.studentUsername === selectedStudentUsername &&
+      String(r.status || "").toLowerCase() === "accepted"
+    );
+    if (!hasAccess) {
+      alert("You do not have access to this student details.");
+      window.location.href = "admin_dashboard.html";
+      return false;
+    }
+    return true;
   }
 
   function fillTable(selector, rowsHtml, colspan, emptyMessage) {
@@ -117,6 +120,9 @@
 
   async function renderFromApi() {
     try {
+      const ok = await ensureAccess();
+      if (!ok) return;
+
       const meRes = await Api.me();
       if (meRes?.user) {
         teacher = meRes.user;
