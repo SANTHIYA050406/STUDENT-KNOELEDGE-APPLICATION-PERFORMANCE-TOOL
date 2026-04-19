@@ -144,6 +144,16 @@ public final class Db {
             password = "";
         }
 
+        // Helpful in Railway logs when diagnosing 503 (webapp fails to start).
+        // Never print passwords.
+        try {
+            URI parsed = new URI(jdbcUrl.substring("jdbc:".length()));
+            System.out.println("[db] jdbcUrlHost=" + parsed.getHost() + " jdbcUrlPort=" + (parsed.getPort() == -1 ? 3306 : parsed.getPort()));
+        } catch (Exception ignored) {
+            System.out.println("[db] jdbcUrl=" + jdbcUrl);
+        }
+        System.out.println("[db] username=" + username);
+
         return new DbRuntime(jdbcUrl, username, password);
     }
 
